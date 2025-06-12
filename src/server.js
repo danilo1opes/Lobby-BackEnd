@@ -37,12 +37,18 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use('/uploads', express.static('uploads'));
 
 // Conectar ao MongoDB
-// Conectar ao MongoDB
+console.log('MONGODB_URI:', process.env.MONGODB_URI || 'Não definido');
+if (!process.env.MONGODB_URI) {
+  console.error(
+    'Erro: MONGODB_URI não está definido. Verifique as variáveis de ambiente.'
+  );
+  process.exit(1);
+}
 mongoose
-  .connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/dogsapi')
+  .connect(process.env.MONGODB_URI, { family: 4 }) // Forçar IPv4 para evitar problemas com IPv6
   .then(() => console.log('Conectado ao MongoDB'))
   .catch((err) => console.error('Erro ao conectar ao MongoDB:', err));
-  
+
 // Rotas
 app.use('/json/jwt-auth/v1', require('./routes/auth'));
 app.use('/json/api', require('./routes/user'));
@@ -89,7 +95,7 @@ app.use((req, res) => {
   res.status(404).json({ error: 'Endpoint não encontrado' });
 });
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 8080; // Alterado para 8080 para compatibilidade com Railway
 app.listen(PORT, () => {
   console.log(`Servidor rodando na porta ${PORT}`);
 });
