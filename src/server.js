@@ -8,8 +8,8 @@ require('dotenv').config();
 
 const app = express();
 
-// Configurar trust proxy para suportar X-Forwarded-For
-app.set('trust proxy', true);
+// Configurar trust proxy para suportar 1 proxy (Railway)
+app.set('trust proxy', 1);
 
 // Middleware de segurança
 app.use(helmet());
