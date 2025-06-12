@@ -37,14 +37,12 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use('/uploads', express.static('uploads'));
 
 // Conectar ao MongoDB
+// Conectar ao MongoDB
 mongoose
-  .connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/dogsapi', {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  })
+  .connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/dogsapi')
   .then(() => console.log('Conectado ao MongoDB'))
   .catch((err) => console.error('Erro ao conectar ao MongoDB:', err));
-
+  
 // Rotas
 app.use('/json/jwt-auth/v1', require('./routes/auth'));
 app.use('/json/api', require('./routes/user'));
