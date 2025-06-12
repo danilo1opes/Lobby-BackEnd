@@ -5,7 +5,6 @@ const morgan = require('morgan');
 const mongoose = require('mongoose');
 const rateLimit = require('express-rate-limit');
 require('dotenv').config();
-
 const app = express();
 
 // Middleware de segurança
