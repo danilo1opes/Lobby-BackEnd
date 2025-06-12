@@ -5,7 +5,11 @@ const morgan = require('morgan');
 const mongoose = require('mongoose');
 const rateLimit = require('express-rate-limit');
 require('dotenv').config();
+
 const app = express();
+
+// Configurar trust proxy para suportar X-Forwarded-For
+app.set('trust proxy', true);
 
 // Middleware de segurança
 app.use(helmet());
@@ -44,9 +48,12 @@ if (!process.env.MONGODB_URI) {
   process.exit(1);
 }
 mongoose
-  .connect(process.env.MONGODB_URI, { family: 4 }) // Forçar IPv4 para evitar problemas com IPv6
+  .connect(process.env.MONGODB_URI, { family: 4 })
   .then(() => console.log('Conectado ao MongoDB'))
-  .catch((err) => console.error('Erro ao conectar ao MongoDB:', err));
+  .catch((err) => {
+    console.error('Erro ao conectar ao MongoDB:', err.message);
+    process.exit(1);
+  });
 
 // Rotas
 app.use('/json/jwt-auth/v1', require('./routes/auth'));
@@ -94,7 +101,7 @@ app.use((req, res) => {
   res.status(404).json({ error: 'Endpoint não encontrado' });
 });
 
-const PORT = process.env.PORT || 8080; // Alterado para 8080 para compatibilidade com Railway
+const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => {
   console.log(`Servidor rodando na porta ${PORT}`);
 });
