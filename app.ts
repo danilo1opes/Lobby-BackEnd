@@ -2,7 +2,6 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
-
 import authRoutes from './src/routes/authRoutes';
 import userRoutes from './src/routes/userRoutes';
 import photoRoutes from './src/routes/photoRoutes';
@@ -10,7 +9,6 @@ import commentRoutes from './src/routes/commentRoutes';
 import statsRoutes from './src/routes/statsRoutes';
 
 dotenv.config();
-
 const app = express();
 
 app.use(cors({ origin: process.env.FRONTEND_URL }));

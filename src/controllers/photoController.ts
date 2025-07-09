@@ -20,18 +20,18 @@ export const createPhoto = async (req: Request, res: Response) => {
 };
 
 export const getPhotos = async (req: Request, res: Response) => {
-  const { _page = 1, _total = 10, _user } = req.query;
-  const page = parseInt(_page as string);
-  const total = parseInt(_total as string);
   try {
-    const query = _user ? { user: _user } : {};
+    const { _page, _total, _user } = req.query;
+    const page = parseInt(_page as string) || 1;
+    const total = parseInt(_total as string) || 6;
+    const query = _user && _user !== 'undefined' ? { user: _user } : {};
     const photos = await Photo.find(query)
       .skip((page - 1) * total)
-      .limit(total)
-      .populate('user', 'email');
-    return res.json(photos);
+      .limit(total);
+    res.json(photos);
   } catch (error) {
-    return res.status(500).json({ error: 'Erro ao buscar posts' });
+    console.error('Erro ao buscar fotos:', error);
+    res.status(500).json({ error: 'Erro interno ao buscar fotos' });
   }
 };
 
