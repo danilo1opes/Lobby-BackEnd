@@ -16,10 +16,15 @@ app.use(express.json());
 app.use('/uploads', express.static('uploads'));
 
 app.use('/jwt-auth/v1', authRoutes);
-app.use('/api/user', userRoutes);
-app.use('/api/photo', photoRoutes);
-app.use('/api/comment', commentRoutes);
-app.use('/api/stats', statsRoutes);
+app.use('/api', userRoutes); // Ajustado para /api
+app.use('/api', photoRoutes);
+app.use('/api', commentRoutes);
+app.use('/api', statsRoutes);
+
+app.use((err, req, res, next) => {
+  console.error('Erro no servidor:', err.stack);
+  res.status(500).json({ error: 'Erro interno do servidor' });
+});
 
 mongoose
   .connect(process.env.MONGODB_URI!)
