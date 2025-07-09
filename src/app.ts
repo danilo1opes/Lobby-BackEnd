@@ -23,9 +23,9 @@ app.use('/api/photo', photoRoutes);
 app.use('/api/comment', commentRoutes);
 app.use('/api/stats', statsRoutes);
 
-mongoose.connect(process.env.MONGODB_URI!)
+mongoose
+  .connect(process.env.MONGODB_URI!)
   .then(() => console.log('MongoDB conectado'))
-  .catch(err => console.error('Erro MongoDB:', err));
+  .catch((err) => console.error('Erro MongoDB:', err));
 
 export default app;
-
