@@ -34,9 +34,10 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 const mongoose_1 = __importStar(require("mongoose"));
-const commentSchema = new mongoose_1.Schema({
-    text: { type: String, required: true },
+const CommentSchema = new mongoose_1.Schema({
+    content: { type: String, required: true },
     author: { type: mongoose_1.Schema.Types.ObjectId, ref: 'User', required: true },
-    photo: { type: mongoose_1.Schema.Types.ObjectId, ref: 'Photo', required: true },
-}, { timestamps: true });
-exports.default = mongoose_1.default.model('Comment', commentSchema);
+    post: { type: mongoose_1.Schema.Types.ObjectId, ref: 'Photo', required: true },
+    createdAt: { type: Date, default: Date.now },
+});
+exports.default = mongoose_1.default.model('Comment', CommentSchema);
