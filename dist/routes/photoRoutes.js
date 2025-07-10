@@ -19,7 +19,7 @@ const Comment_1 = __importDefault(require("../models/Comment"));
 const User_1 = __importDefault(require("../models/User"));
 const auth_1 = require("../middleware/auth");
 const router = (0, express_1.Router)();
-const upload = (0, multer_1.default)({ dest: 'uploads/' }); // Adjust for production storage
+const upload = (0, multer_1.default)({ dest: 'uploads/' });
 // POST /json/photo - Create a new photo post
 router.post('/photo', auth_1.authMiddleware, upload.single('img'), (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
