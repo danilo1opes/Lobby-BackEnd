@@ -11,7 +11,12 @@ router.post('/user', async (req: Request, res: Response) => {
     const { email, username, password } = req.body;
 
     if (!email || !username || !password) {
-      return res.status(406).json({ error: 'Dados incompletos' });
+      return res
+        .status(406)
+        .json({
+          error:
+            'Dados incompletos: email, username e password são obrigatórios',
+        });
     }
 
     const existingUser = await User.findOne({ $or: [{ email }, { username }] });
