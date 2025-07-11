@@ -16,11 +16,18 @@ const transporter = nodemailer.createTransport({
   },
 });
 
+console.log('Transporter config:', transporter.options);
+
 router.post('/password/lost', async (req: Request, res: Response) => {
   try {
     const { login, url } = req.body;
     if (!login) {
       return res.status(406).json({ error: 'Informe o email ou login' });
+    }
+    if (!url) {
+      return res
+        .status(406)
+        .json({ error: 'URL de redirecionamento é requerida' });
     }
 
     const user = await User.findOne({
@@ -38,18 +45,29 @@ router.post('/password/lost', async (req: Request, res: Response) => {
       user.username
     )}`;
 
+    console.log('Enviando email para:', user.email, 'com URL:', resetUrl);
     await transporter.sendMail({
       to: user.email,
       subject: 'Password Reset',
       text: `Utilize o link abaixo para resetar a sua senha:\n${resetUrl}`,
     });
 
-    return res.status(200).json('Email enviado');
-  } catch (error) {
-    return res.status(500).json({ error: 'Erro interno no servidor' });
+    console.log(`Email enviado para ${user.email} com token ${resetToken}`);
+    return res.status(200).json({ message: 'Email enviado' });
+  } catch (error: any) {
+    // Tipagem explícita como 'any' para capturar qualquer erro
+    console.error('Erro no /password/lost:', error);
+    return res.status(500).json({
+      error: 'Erro interno no servidor',
+      details:
+        process.env.NODE_ENV === 'development'
+          ? (error as Error).message
+          : undefined, // Cast explícito para Error
+    });
   }
 });
 
+// POST /json/password/reset - Reset password
 router.post('/password/reset', async (req: Request, res: Response) => {
   try {
     const { login, password, key } = req.body;
@@ -57,7 +75,9 @@ router.post('/password/reset', async (req: Request, res: Response) => {
       return res.status(406).json({ error: 'Dados incompletos' });
     }
 
-    const user = await User.findOne({ username: login });
+    const user = await User.findOne({
+      $or: [{ email: login }, { username: login }],
+    });
     if (!user) {
       return res.status(401).json({ error: 'Usuário não existe' });
     }
@@ -71,9 +91,18 @@ router.post('/password/reset', async (req: Request, res: Response) => {
     user.password = await bcrypt.hash(password, 10);
     await user.save();
 
-    return res.status(200).json('Senha alterada');
-  } catch (error) {
-    return res.status(500).json({ error: 'Erro interno no servidor' });
+    console.log(`Senha alterada para usuário ${user.username}`);
+    return res.status(200).json({ message: 'Senha alterada' });
+  } catch (error: any) {
+    // Tipagem explícita como 'any'
+    console.error('Erro no /password/reset:', error);
+    return res.status(500).json({
+      error: 'Erro interno no servidor',
+      details:
+        process.env.NODE_ENV === 'development'
+          ? (error as Error).message
+          : undefined, // Cast explícito
+    });
   }
 });
 
