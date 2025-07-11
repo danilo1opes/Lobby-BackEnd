@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
 import User, { IUser } from '../models/User';
 import { authMiddleware, generateToken } from '../middleware/auth';
 
@@ -9,41 +10,34 @@ const router = Router();
 router.post('/user', async (req: Request, res: Response) => {
   try {
     const { email, username, password } = req.body;
-
     if (!email || !username || !password) {
       return res
         .status(406)
-        .json({
-          error:
-            'Dados incompletos: email, username e password são obrigatórios',
-        });
+        .json({ error: 'Email, username e password são obrigatórios' });
     }
 
     const existingUser = await User.findOne({ $or: [{ email }, { username }] });
     if (existingUser) {
-      return res.status(403).json({ error: 'Email ou username já cadastrado' });
+      return res.status(409).json({ error: 'Email ou username já existe' });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const user = new User({
-      email,
-      username,
-      password: hashedPassword,
-      nome: username, // Default nome to username
-    });
-
+    const user = new User({ email, username, password: hashedPassword });
     await user.save();
 
-    const token = generateToken({
-      id: user._id,
-      username: user.username,
-      nome: user.nome,
-      email: user.email,
-    });
-
+    const token = jwt.sign(
+      { id: user._id, username },
+      process.env.JWT_SECRET || 'fallback_secret',
+      { expiresIn: '1d' }
+    );
     return res.status(201).json({ id: user._id, token });
-  } catch (error) {
-    return res.status(500).json({ error: 'Erro interno no servidor' });
+  } catch (error: any) {
+    console.error('Erro no /user:', error);
+    return res.status(500).json({
+      error: 'Erro interno no servidor',
+      details:
+        process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
   }
 });
 
