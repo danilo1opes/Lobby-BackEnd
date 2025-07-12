@@ -20,7 +20,7 @@ app.use(
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], // Métodos permitidos
     allowedHeaders: ['Content-Type', 'Authorization'], // Headers permitidos
     credentials: true, // Permite cookies ou credenciais, se necessário
-  })
+  }),
 );
 
 app.use(express.json());
@@ -43,3 +43,5 @@ app.get('/json', (req, res) => {
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);
 });
+
+app.use('/uploads', express.static('uploads'));

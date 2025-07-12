@@ -23,11 +23,11 @@ const storage = multer.diskStorage({
 const fileFilter = (
   req: Request,
   file: Express.Multer.File,
-  cb: multer.FileFilterCallback
+  cb: multer.FileFilterCallback,
 ) => {
   const allowedTypes = /jpeg|jpg|png/;
   const extname = allowedTypes.test(
-    path.extname(file.originalname).toLowerCase()
+    path.extname(file.originalname).toLowerCase(),
   );
   const mimetype = allowedTypes.test(file.mimetype);
   if (extname && mimetype) {
@@ -93,14 +93,14 @@ router.post(
       console.error('Erro no /photo:', error);
       return res.status(500).json({ error: 'Erro interno no servidor' });
     }
-  }
+  },
 );
 
 router.get('/photo/:id', async (req: Request, res: Response) => {
   try {
     const photo = await Photo.findById(req.params.id).populate(
       'author',
-      'username'
+      'username',
     );
     if (!photo) {
       return res.status(404).json({ error: 'Post não encontrado' });
@@ -111,7 +111,7 @@ router.get('/photo/:id', async (req: Request, res: Response) => {
 
     const comments = await Comment.find({ post: photo._id }).populate(
       'author',
-      'username'
+      'username',
     );
 
     const response = {
@@ -169,12 +169,12 @@ router.get('/photo', async (req: Request, res: Response) => {
         author: photo.author ? (photo.author as any).username : 'Unknown',
         title: photo.title,
         date: photo.createdAt,
-        src: photo.src,
+        src: photo.src, // Garantir que src esteja presente
         peso: photo.peso,
         idade: photo.idade,
         acessos: photo.acessos,
         total_comments: await Comment.countDocuments({ post: photo._id }),
-      }))
+      })),
     );
 
     return res.status(200).json(response);
@@ -206,7 +206,7 @@ router.delete(
     } catch (error) {
       return res.status(500).json({ error: 'Erro interno no servidor' });
     }
-  }
+  },
 );
 
 export default router;
