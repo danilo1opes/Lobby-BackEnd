@@ -44,4 +44,4 @@ app.listen(port, () => {
   console.log(`Server running on port ${port}`);
 });
 
-app.use('/uploads', express.static('uploads'));
+app.use('/uploads', express.static('uploads'))

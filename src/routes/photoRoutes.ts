@@ -43,7 +43,6 @@ const upload = multer({
   limits: { fileSize: 5 * 1024 * 1024 },
 }).single('img');
 
-// POST /photo
 router.post(
   '/photo',
   authMiddleware,
@@ -93,7 +92,6 @@ router.post(
   },
 );
 
-// GET /photo/:id
 router.get('/photo/:id', async (req: Request, res: Response) => {
   try {
     const photo = await Photo.findById(req.params.id).populate(
@@ -116,7 +114,7 @@ router.get('/photo/:id', async (req: Request, res: Response) => {
         author: photo.author ? (photo.author as any).username : 'Unknown',
         title: photo.title,
         date: photo.createdAt,
-        src: photo.src, // Garantir que src esteja presente
+        src: photo.src,
         peso: photo.peso,
         idade: photo.idade,
         acessos: photo.acessos,
@@ -133,7 +131,7 @@ router.get('/photo/:id', async (req: Request, res: Response) => {
       })),
     };
 
-    console.log('GET /photo/:id - Resposta:', response); // Depuração
+    console.log('GET /photo/:id - Resposta:', response);
     return res.status(200).json(response);
   } catch (error) {
     console.error('Erro no GET /photo/:id:', error);
@@ -141,7 +139,6 @@ router.get('/photo/:id', async (req: Request, res: Response) => {
   }
 });
 
-// GET /photo (lista)
 router.get('/photo', async (req: Request, res: Response) => {
   try {
     const _total = parseInt(req.query._total as string) || 6;
@@ -168,7 +165,7 @@ router.get('/photo', async (req: Request, res: Response) => {
         author: photo.author ? (photo.author as any).username : 'Unknown',
         title: photo.title,
         date: photo.createdAt,
-        src: photo.src, // Garantir que src esteja presente
+        src: photo.src,
         peso: photo.peso,
         idade: photo.idade,
         acessos: photo.acessos,
@@ -176,7 +173,7 @@ router.get('/photo', async (req: Request, res: Response) => {
       })),
     );
 
-    console.log('GET /photo - Resposta:', response); // Depuração
+    console.log('GET /photo - Resposta:', response);
     return res.status(200).json(response);
   } catch (error) {
     console.error('Erro no GET /photo:', error);
@@ -184,7 +181,6 @@ router.get('/photo', async (req: Request, res: Response) => {
   }
 });
 
-// DELETE /photo/:id
 router.delete(
   '/photo/:id',
   authMiddleware,
