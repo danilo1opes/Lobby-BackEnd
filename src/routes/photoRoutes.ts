@@ -16,7 +16,7 @@ const storage = multer.diskStorage({
     cb(null, uploadDir);
   },
   filename: (req, file, cb) => {
-    const filename = `${Date.now()}-${file.originalname.replace(/\s+/g, '-')}`; 
+    const filename = `${Date.now()}-${file.originalname.replace(/\s+/g, '-')}`; // Remove espaços
     cb(null, filename);
   },
 });
@@ -40,31 +40,28 @@ const fileFilter = (
 const upload = multer({
   storage,
   fileFilter,
-  limits: { fileSize: 6 * 1024 * 1024 },
+  limits: { fileSize: 5 * 1024 * 1024 },
 }).single('img');
 
+// POST /photo
 router.post(
   '/photo',
   authMiddleware,
   (req: Request, res: Response, next) => {
     upload(req, res, (err) => {
-      if (err) {
-        return res.status(400).json({ error: err.message });
-      }
+      if (err) return res.status(400).json({ error: err.message });
       next();
     });
   },
   async (req: Request, res: Response) => {
     try {
       const user = (req as any).user;
-      if (!user || !user.id) {
+      if (!user || !user.id)
         return res.status(401).json({ error: 'Usuário não possui permissão' });
-      }
 
       const { nome, peso, idade } = req.body;
-      if (!nome || !peso || !idade || !req.file) {
+      if (!nome || !peso || !idade || !req.file)
         return res.status(422).json({ error: 'Dados incompletos' });
-      }
 
       const src = `/uploads/${req.file.filename}`;
       const photo = new Photo({
@@ -78,7 +75,6 @@ router.post(
       });
 
       await photo.save();
-
       return res.status(201).json({
         photo: {
           id: photo._id,
@@ -97,15 +93,14 @@ router.post(
   },
 );
 
+// GET /photo/:id
 router.get('/photo/:id', async (req: Request, res: Response) => {
   try {
     const photo = await Photo.findById(req.params.id).populate(
       'author',
       'username',
     );
-    if (!photo) {
-      return res.status(404).json({ error: 'Post não encontrado' });
-    }
+    if (!photo) return res.status(404).json({ error: 'Post não encontrado' });
 
     photo.acessos += 1;
     await photo.save();
@@ -121,7 +116,7 @@ router.get('/photo/:id', async (req: Request, res: Response) => {
         author: photo.author ? (photo.author as any).username : 'Unknown',
         title: photo.title,
         date: photo.createdAt,
-        src: photo.src,
+        src: photo.src, // Garantir que src esteja presente
         peso: photo.peso,
         idade: photo.idade,
         acessos: photo.acessos,
@@ -138,12 +133,15 @@ router.get('/photo/:id', async (req: Request, res: Response) => {
       })),
     };
 
+    console.log('GET /photo/:id - Resposta:', response); // Depuração
     return res.status(200).json(response);
   } catch (error) {
+    console.error('Erro no GET /photo/:id:', error);
     return res.status(500).json({ error: 'Erro interno no servidor' });
   }
 });
 
+// GET /photo (lista)
 router.get('/photo', async (req: Request, res: Response) => {
   try {
     const _total = parseInt(req.query._total as string) || 6;
@@ -178,13 +176,15 @@ router.get('/photo', async (req: Request, res: Response) => {
       })),
     );
 
+    console.log('GET /photo - Resposta:', response); // Depuração
     return res.status(200).json(response);
   } catch (error) {
+    console.error('Erro no GET /photo:', error);
     return res.status(500).json({ error: 'Erro interno no servidor' });
   }
 });
 
-//Delete
+// DELETE /photo/:id
 router.delete(
   '/photo/:id',
   authMiddleware,
@@ -193,16 +193,14 @@ router.delete(
       const user = (req as any).user;
       const photo = await Photo.findById(req.params.id);
 
-      if (!photo || photo.author.toString() !== user.id) {
+      if (!photo || photo.author.toString() !== user.id)
         return res.status(401).json({ error: 'Sem permissão' });
-      }
 
       await Photo.deleteOne({ _id: req.params.id });
       await Comment.deleteMany({ post: req.params.id });
 
-      if (photo.src && fs.existsSync(`.${photo.src}`)) {
+      if (photo.src && fs.existsSync(`.${photo.src}`))
         fs.unlinkSync(`.${photo.src}`);
-      }
 
       return res.status(200).json('Post deletado');
     } catch (error) {
