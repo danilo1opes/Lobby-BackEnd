@@ -1,18 +1,58 @@
 import { Router, Request, Response } from 'express';
 import multer from 'multer';
-import Photo, { IPhoto } from '../models/Photo';
-import Comment, { IComment } from '../models/Comment';
-import User, { IUser } from '../models/User';
+import Photo from '../models/Photo';
+import Comment from '../models/Comment';
+import User from '../models/User';
 import { authMiddleware } from '../middleware/auth';
+import path from 'path';
+import fs from 'fs';
 
 const router = Router();
-const upload = multer({ dest: 'uploads/' });
 
-// POST /json/photo - Create a new photo post
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const uploadDir = 'uploads/';
+    if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir);
+    cb(null, uploadDir);
+  },
+  filename: (req, file, cb) => {
+    cb(null, `${Date.now()}-${file.originalname}`);
+  },
+});
+
+const fileFilter = (
+  req: Request,
+  file: Express.Multer.File,
+  cb: multer.FileFilterCallback
+) => {
+  const allowedTypes = /jpeg|jpg|png/;
+  const extname = allowedTypes.test(
+    path.extname(file.originalname).toLowerCase()
+  );
+  const mimetype = allowedTypes.test(file.mimetype);
+  if (extname && mimetype) {
+    return cb(null, true);
+  }
+  cb(new Error('Apenas arquivos de imagem (jpeg, jpg, png) são permitidos'));
+};
+
+const upload = multer({
+  storage,
+  fileFilter,
+  limits: { fileSize: 6 * 1024 * 1024 },
+}).single('img');
+
 router.post(
   '/photo',
   authMiddleware,
-  upload.single('img'),
+  (req: Request, res: Response, next) => {
+    upload(req, res, (err) => {
+      if (err) {
+        return res.status(400).json({ error: err.message });
+      }
+      next();
+    });
+  },
   async (req: Request, res: Response) => {
     try {
       const user = (req as any).user;
@@ -25,11 +65,12 @@ router.post(
         return res.status(422).json({ error: 'Dados incompletos' });
       }
 
+      const src = `/uploads/${req.file.filename}`;
       const photo = new Photo({
         title: nome,
         content: nome,
         author: user.id,
-        imageUrl: `/uploads/${req.file.filename}`, // Adjust based on storage solution
+        src,
         peso,
         idade,
         acessos: 0,
@@ -38,26 +79,29 @@ router.post(
       await photo.save();
 
       return res.status(201).json({
-        post_author: user.id,
-        post_type: 'photo',
-        post_status: 'publish',
-        post_title: nome,
-        post_content: nome,
-        files: req.file,
-        meta_input: { peso, idade, acessos: 0 },
+        photo: {
+          id: photo._id,
+          author: user.id,
+          title: nome,
+          src,
+          peso,
+          idade,
+          acessos: 0,
+        },
       });
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Erro no /photo:', error);
       return res.status(500).json({ error: 'Erro interno no servidor' });
     }
   }
 );
 
-// GET /json/photo/:id - Fetch a single photo with comments
 router.get('/photo/:id', async (req: Request, res: Response) => {
   try {
-    const photo = await Photo.findById(req.params.id).populate<{
-      author: IUser;
-    }>('author', 'username');
+    const photo = await Photo.findById(req.params.id).populate(
+      'author',
+      'username'
+    );
     if (!photo) {
       return res.status(404).json({ error: 'Post não encontrado' });
     }
@@ -65,17 +109,18 @@ router.get('/photo/:id', async (req: Request, res: Response) => {
     photo.acessos += 1;
     await photo.save();
 
-    const comments = await Comment.find({ post: photo._id }).populate<{
-      author: IUser;
-    }>('author', 'username');
+    const comments = await Comment.find({ post: photo._id }).populate(
+      'author',
+      'username'
+    );
 
     const response = {
       photo: {
         id: photo._id,
-        author: photo.author ? photo.author.username : 'Unknown',
+        author: photo.author ? (photo.author as any).username : 'Unknown',
         title: photo.title,
         date: photo.createdAt,
-        src: photo.imageUrl,
+        src: photo.src,
         peso: photo.peso,
         idade: photo.idade,
         acessos: photo.acessos,
@@ -84,7 +129,9 @@ router.get('/photo/:id', async (req: Request, res: Response) => {
       comments: comments.map((comment) => ({
         comment_ID: comment._id,
         comment_post_ID: comment.post,
-        comment_author: comment.author ? comment.author.username : 'Unknown',
+        comment_author: (comment.author as any)
+          ? (comment.author as any).username
+          : 'Unknown',
         comment_content: comment.content,
         comment_date: comment.createdAt,
       })),
@@ -96,7 +143,6 @@ router.get('/photo/:id', async (req: Request, res: Response) => {
   }
 });
 
-// GET /json/photo - Fetch photos with pagination and optional user filter
 router.get('/photo', async (req: Request, res: Response) => {
   try {
     const _total = parseInt(req.query._total as string) || 6;
@@ -113,17 +159,17 @@ router.get('/photo', async (req: Request, res: Response) => {
     if (authorId) query.author = authorId;
 
     const photos = await Photo.find(query)
-      .populate<{ author: IUser }>('author', 'username')
+      .populate('author', 'username')
       .skip((_page - 1) * _total)
       .limit(_total);
 
     const response = await Promise.all(
       photos.map(async (photo) => ({
         id: photo._id,
-        author: photo.author ? photo.author.username : 'Unknown',
+        author: photo.author ? (photo.author as any).username : 'Unknown',
         title: photo.title,
         date: photo.createdAt,
-        src: photo.imageUrl,
+        src: photo.src,
         peso: photo.peso,
         idade: photo.idade,
         acessos: photo.acessos,
@@ -137,7 +183,6 @@ router.get('/photo', async (req: Request, res: Response) => {
   }
 });
 
-// DELETE /json/photo/:id - Delete a photo post
 router.delete(
   '/photo/:id',
   authMiddleware,
@@ -152,6 +197,10 @@ router.delete(
 
       await Photo.deleteOne({ _id: req.params.id });
       await Comment.deleteMany({ post: req.params.id });
+
+      if (photo.src && fs.existsSync(`.${photo.src}`)) {
+        fs.unlinkSync(`.${photo.src}`);
+      }
 
       return res.status(200).json('Post deletado');
     } catch (error) {
