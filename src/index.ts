@@ -11,7 +11,6 @@ import passwordRoutes from './routes/passwordRoutes';
 dotenv.config();
 
 const app: Express = express();
-const port = process.env.PORT || 3000;
 
 // Configurar CORS
 app.use((req, res, next) => {
@@ -23,6 +22,8 @@ app.use((req, res, next) => {
 });
 
 app.use(express.json());
+app.use('/uploads', express.static('uploads')); // Serve a pasta uploads na raiz
+
 app.get('/', (req, res) => {
   res.send('Lobby Api');
 });
@@ -39,12 +40,8 @@ app.get('/json', (req, res) => {
   res.json({ message: 'API está rodando' });
 });
 
-app.listen(port, () => {
-  console.log(`Server running on port ${port}`);
+// Iniciar servidor na porta do ambiente
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
 });
-
-app.listen(process.env.PORT || 3000, () => {
-  console.log('Servidor rodando na porta ' + (process.env.PORT || 3000));
-});
-
-app.use('/uploads', express.static('uploads'));
