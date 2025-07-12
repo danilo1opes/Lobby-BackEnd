@@ -18,10 +18,43 @@ const Photo_1 = __importDefault(require("../models/Photo"));
 const Comment_1 = __importDefault(require("../models/Comment"));
 const User_1 = __importDefault(require("../models/User"));
 const auth_1 = require("../middleware/auth");
+const path_1 = __importDefault(require("path"));
+const fs_1 = __importDefault(require("fs"));
 const router = (0, express_1.Router)();
-const upload = (0, multer_1.default)({ dest: 'uploads/' });
-// POST /json/photo - Create a new photo post
-router.post('/photo', auth_1.authMiddleware, upload.single('img'), (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+const storage = multer_1.default.diskStorage({
+    destination: (req, file, cb) => {
+        const uploadDir = 'uploads/';
+        if (!fs_1.default.existsSync(uploadDir))
+            fs_1.default.mkdirSync(uploadDir);
+        cb(null, uploadDir);
+    },
+    filename: (req, file, cb) => {
+        const filename = `${Date.now()}-${file.originalname.replace(/\s+/g, '-')}`;
+        cb(null, filename);
+    },
+});
+const fileFilter = (req, file, cb) => {
+    const allowedTypes = /jpeg|jpg|png/;
+    const extname = allowedTypes.test(path_1.default.extname(file.originalname).toLowerCase());
+    const mimetype = allowedTypes.test(file.mimetype);
+    if (extname && mimetype) {
+        return cb(null, true);
+    }
+    cb(new Error('Apenas arquivos de imagem (jpeg, jpg, png) são permitidos'));
+};
+const upload = (0, multer_1.default)({
+    storage,
+    fileFilter,
+    limits: { fileSize: 6 * 1024 * 1024 },
+}).single('img');
+router.post('/photo', auth_1.authMiddleware, (req, res, next) => {
+    upload(req, res, (err) => {
+        if (err) {
+            return res.status(400).json({ error: err.message });
+        }
+        next();
+    });
+}, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const user = req.user;
         if (!user || !user.id) {
@@ -31,31 +64,34 @@ router.post('/photo', auth_1.authMiddleware, upload.single('img'), (req, res) =>
         if (!nome || !peso || !idade || !req.file) {
             return res.status(422).json({ error: 'Dados incompletos' });
         }
+        const src = `/uploads/${req.file.filename}`;
         const photo = new Photo_1.default({
             title: nome,
             content: nome,
             author: user.id,
-            imageUrl: `/uploads/${req.file.filename}`, // Adjust based on storage solution
+            src,
             peso,
             idade,
             acessos: 0,
         });
         yield photo.save();
         return res.status(201).json({
-            post_author: user.id,
-            post_type: 'photo',
-            post_status: 'publish',
-            post_title: nome,
-            post_content: nome,
-            files: req.file,
-            meta_input: { peso, idade, acessos: 0 },
+            photo: {
+                id: photo._id,
+                author: user.id,
+                title: nome,
+                src,
+                peso,
+                idade,
+                acessos: 0,
+            },
         });
     }
     catch (error) {
+        console.error('Erro no /photo:', error);
         return res.status(500).json({ error: 'Erro interno no servidor' });
     }
 }));
-// GET /json/photo/:id - Fetch a single photo with comments
 router.get('/photo/:id', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const photo = yield Photo_1.default.findById(req.params.id).populate('author', 'username');
@@ -71,7 +107,7 @@ router.get('/photo/:id', (req, res) => __awaiter(void 0, void 0, void 0, functio
                 author: photo.author ? photo.author.username : 'Unknown',
                 title: photo.title,
                 date: photo.createdAt,
-                src: photo.imageUrl,
+                src: photo.src,
                 peso: photo.peso,
                 idade: photo.idade,
                 acessos: photo.acessos,
@@ -80,7 +116,9 @@ router.get('/photo/:id', (req, res) => __awaiter(void 0, void 0, void 0, functio
             comments: comments.map((comment) => ({
                 comment_ID: comment._id,
                 comment_post_ID: comment.post,
-                comment_author: comment.author ? comment.author.username : 'Unknown',
+                comment_author: comment.author
+                    ? comment.author.username
+                    : 'Unknown',
                 comment_content: comment.content,
                 comment_date: comment.createdAt,
             })),
@@ -91,7 +129,6 @@ router.get('/photo/:id', (req, res) => __awaiter(void 0, void 0, void 0, functio
         return res.status(500).json({ error: 'Erro interno no servidor' });
     }
 }));
-// GET /json/photo - Fetch photos with pagination and optional user filter
 router.get('/photo', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const _total = parseInt(req.query._total) || 6;
@@ -116,7 +153,7 @@ router.get('/photo', (req, res) => __awaiter(void 0, void 0, void 0, function* (
                 author: photo.author ? photo.author.username : 'Unknown',
                 title: photo.title,
                 date: photo.createdAt,
-                src: photo.imageUrl,
+                src: photo.src, // Garantir que src esteja presente
                 peso: photo.peso,
                 idade: photo.idade,
                 acessos: photo.acessos,
@@ -129,7 +166,7 @@ router.get('/photo', (req, res) => __awaiter(void 0, void 0, void 0, function* (
         return res.status(500).json({ error: 'Erro interno no servidor' });
     }
 }));
-// DELETE /json/photo/:id - Delete a photo post
+//Delete
 router.delete('/photo/:id', auth_1.authMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const user = req.user;
@@ -139,6 +176,9 @@ router.delete('/photo/:id', auth_1.authMiddleware, (req, res) => __awaiter(void 
         }
         yield Photo_1.default.deleteOne({ _id: req.params.id });
         yield Comment_1.default.deleteMany({ post: req.params.id });
+        if (photo.src && fs_1.default.existsSync(`.${photo.src}`)) {
+            fs_1.default.unlinkSync(`.${photo.src}`);
+        }
         return res.status(200).json('Post deletado');
     }
     catch (error) {
