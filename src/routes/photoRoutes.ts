@@ -62,7 +62,7 @@ router.post(
       if (!nome || !peso || !idade || !req.file)
         return res.status(422).json({ error: 'Dados incompletos' });
 
-      const src = `/uploads/${req.file.filename}`;
+      const src = `https://lobby-backend-7r4k.onrender.com/uploads/${req.file.filename}`; // URL absoluta
       const photo = new Photo({
         title: nome,
         content: nome,
@@ -114,7 +114,7 @@ router.get('/photo/:id', async (req: Request, res: Response) => {
         author: photo.author ? (photo.author as any).username : 'Unknown',
         title: photo.title,
         date: photo.createdAt,
-        src: photo.src,
+        src: photo.src, // URL absoluta
         peso: photo.peso,
         idade: photo.idade,
         acessos: photo.acessos,
@@ -165,7 +165,7 @@ router.get('/photo', async (req: Request, res: Response) => {
         author: photo.author ? (photo.author as any).username : 'Unknown',
         title: photo.title,
         date: photo.createdAt,
-        src: photo.src,
+        src: photo.src, // URL absoluta
         peso: photo.peso,
         idade: photo.idade,
         acessos: photo.acessos,
@@ -195,8 +195,22 @@ router.delete(
       await Photo.deleteOne({ _id: req.params.id });
       await Comment.deleteMany({ post: req.params.id });
 
-      if (photo.src && fs.existsSync(`.${photo.src}`))
-        fs.unlinkSync(`.${photo.src}`);
+      if (
+        photo.src &&
+        fs.existsSync(
+          `.${photo.src.replace(
+            'https://lobby-backend-7r4k.onrender.com',
+            '',
+          )}`,
+        )
+      ) {
+        fs.unlinkSync(
+          `.${photo.src.replace(
+            'https://lobby-backend-7r4k.onrender.com',
+            '',
+          )}`,
+        );
+      }
 
       return res.status(200).json('Post deletado');
     } catch (error) {

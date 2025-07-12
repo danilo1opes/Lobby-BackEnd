@@ -14,14 +14,13 @@ const app: Express = express();
 const port = process.env.PORT || 3000;
 
 // Configurar CORS
-app.use(
-  cors({
-    origin: 'http://localhost:3000', // Permite requisições do front-end local
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], // Métodos permitidos
-    allowedHeaders: ['Content-Type', 'Authorization'], // Headers permitidos
-    credentials: true, // Permite cookies ou credenciais, se necessário
-  }),
-);
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', 'http://localhost:3000'); // Permite localhost:3000
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  if (req.method === 'OPTIONS') return res.sendStatus(200);
+  next();
+});
 
 app.use(express.json());
 app.get('/', (req, res) => {
@@ -44,4 +43,8 @@ app.listen(port, () => {
   console.log(`Server running on port ${port}`);
 });
 
-app.use('/uploads', express.static('uploads'))
+app.listen(process.env.PORT || 3000, () => {
+  console.log('Servidor rodando na porta ' + (process.env.PORT || 3000));
+});
+
+app.use('/uploads', express.static('uploads'));
