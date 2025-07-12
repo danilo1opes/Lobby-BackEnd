@@ -183,6 +183,7 @@ router.get('/photo', async (req: Request, res: Response) => {
   }
 });
 
+//Delete
 router.delete(
   '/photo/:id',
   authMiddleware,
