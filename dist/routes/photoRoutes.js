@@ -45,33 +45,30 @@ const fileFilter = (req, file, cb) => {
 const upload = (0, multer_1.default)({
     storage,
     fileFilter,
-    limits: { fileSize: 6 * 1024 * 1024 },
+    limits: { fileSize: 5 * 1024 * 1024 },
 }).single('img');
 router.post('/photo', auth_1.authMiddleware, (req, res, next) => {
     upload(req, res, (err) => {
-        if (err) {
+        if (err)
             return res.status(400).json({ error: err.message });
-        }
         next();
     });
 }, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const user = req.user;
-        if (!user || !user.id) {
+        if (!user || !user.id)
             return res.status(401).json({ error: 'Usuário não possui permissão' });
-        }
-        const { nome, peso, idade } = req.body;
-        if (!nome || !peso || !idade || !req.file) {
+        const { nome, personagem, epoca } = req.body;
+        if (!nome || !personagem || !epoca || !req.file)
             return res.status(422).json({ error: 'Dados incompletos' });
-        }
-        const src = `/uploads/${req.file.filename}`;
+        const src = `https://lobby-backend-7r4k.onrender.com/uploads/${req.file.filename}`;
         const photo = new Photo_1.default({
             title: nome,
             content: nome,
             author: user.id,
             src,
-            peso,
-            idade,
+            personagem,
+            epoca,
             acessos: 0,
         });
         yield photo.save();
@@ -81,8 +78,8 @@ router.post('/photo', auth_1.authMiddleware, (req, res, next) => {
                 author: user.id,
                 title: nome,
                 src,
-                peso,
-                idade,
+                personagem,
+                epoca,
                 acessos: 0,
             },
         });
@@ -95,9 +92,8 @@ router.post('/photo', auth_1.authMiddleware, (req, res, next) => {
 router.get('/photo/:id', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const photo = yield Photo_1.default.findById(req.params.id).populate('author', 'username');
-        if (!photo) {
+        if (!photo)
             return res.status(404).json({ error: 'Post não encontrado' });
-        }
         photo.acessos += 1;
         yield photo.save();
         const comments = yield Comment_1.default.find({ post: photo._id }).populate('author', 'username');
@@ -108,8 +104,8 @@ router.get('/photo/:id', (req, res) => __awaiter(void 0, void 0, void 0, functio
                 title: photo.title,
                 date: photo.createdAt,
                 src: photo.src,
-                peso: photo.peso,
-                idade: photo.idade,
+                personagem: photo.personagem,
+                epoca: photo.epoca,
                 acessos: photo.acessos,
                 total_comments: comments.length,
             },
@@ -123,9 +119,11 @@ router.get('/photo/:id', (req, res) => __awaiter(void 0, void 0, void 0, functio
                 comment_date: comment.createdAt,
             })),
         };
+        console.log('GET /photo/:id - Resposta:', response);
         return res.status(200).json(response);
     }
     catch (error) {
+        console.error('Erro no GET /photo/:id:', error);
         return res.status(500).json({ error: 'Erro interno no servidor' });
     }
 }));
@@ -153,31 +151,32 @@ router.get('/photo', (req, res) => __awaiter(void 0, void 0, void 0, function* (
                 author: photo.author ? photo.author.username : 'Unknown',
                 title: photo.title,
                 date: photo.createdAt,
-                src: photo.src, // Garantir que src esteja presente
-                peso: photo.peso,
-                idade: photo.idade,
+                src: photo.src,
+                personagem: photo.personagem,
+                epoca: photo.epoca,
                 acessos: photo.acessos,
                 total_comments: yield Comment_1.default.countDocuments({ post: photo._id }),
             });
         })));
+        console.log('GET /photo - Resposta:', response);
         return res.status(200).json(response);
     }
     catch (error) {
+        console.error('Erro no GET /photo:', error);
         return res.status(500).json({ error: 'Erro interno no servidor' });
     }
 }));
-//Delete
 router.delete('/photo/:id', auth_1.authMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const user = req.user;
         const photo = yield Photo_1.default.findById(req.params.id);
-        if (!photo || photo.author.toString() !== user.id) {
+        if (!photo || photo.author.toString() !== user.id)
             return res.status(401).json({ error: 'Sem permissão' });
-        }
         yield Photo_1.default.deleteOne({ _id: req.params.id });
         yield Comment_1.default.deleteMany({ post: req.params.id });
-        if (photo.src && fs_1.default.existsSync(`.${photo.src}`)) {
-            fs_1.default.unlinkSync(`.${photo.src}`);
+        if (photo.src &&
+            fs_1.default.existsSync(`.${photo.src.replace('https://lobby-backend-7r4k.onrender.com', '')}`)) {
+            fs_1.default.unlinkSync(`.${photo.src.replace('https://lobby-backend-7r4k.onrender.com', '')}`);
         }
         return res.status(200).json('Post deletado');
     }

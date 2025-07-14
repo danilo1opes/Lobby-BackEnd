@@ -16,9 +16,8 @@ const express_1 = require("express");
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const User_1 = __importDefault(require("../models/User"));
-const auth_1 = require("../middleware/auth"); // Verifique a implementação
+const auth_1 = require("../middleware/auth");
 const router = (0, express_1.Router)();
-// Cadastro de usuário
 router.post('/user', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { email, username, password } = req.body;
@@ -36,7 +35,7 @@ router.post('/user', (req, res) => __awaiter(void 0, void 0, void 0, function* (
         if (existingUser) {
             return res.status(409).json({ error: 'Email ou username já existe' });
         }
-        const hashedPassword = yield bcryptjs_1.default.hash(password, 10); // Garante hash da senha
+        const hashedPassword = yield bcryptjs_1.default.hash(password, 10);
         const user = new User_1.default({ email, username, password: hashedPassword });
         yield user.save();
         const token = jsonwebtoken_1.default.sign({ id: user._id, username }, process.env.JWT_SECRET || 'fallback_secret', { expiresIn: '1d' });
@@ -47,7 +46,6 @@ router.post('/user', (req, res) => __awaiter(void 0, void 0, void 0, function* (
         return res.status(500).json({ error: 'Erro interno no servidor' });
     }
 }));
-// Login de usuário
 router.post('/login', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { username, password } = req.body;
@@ -56,7 +54,7 @@ router.post('/login', (req, res) => __awaiter(void 0, void 0, void 0, function* 
                 .status(400)
                 .json({ error: 'Username e password são obrigatórios' });
         }
-        const user = yield User_1.default.findOne({ username }).select('+password'); // Inclui o campo password
+        const user = yield User_1.default.findOne({ username }).select('+password');
         if (!user) {
             return res.status(401).json({ error: 'Usuário não encontrado' });
         }
@@ -72,7 +70,6 @@ router.post('/login', (req, res) => __awaiter(void 0, void 0, void 0, function* 
         return res.status(500).json({ error: 'Erro interno no servidor' });
     }
 }));
-// GET /json/user - Fetch authenticated user details
 router.get('/user', auth_1.authMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const user = req.user;
@@ -82,7 +79,7 @@ router.get('/user', auth_1.authMiddleware, (req, res) => __awaiter(void 0, void 
         const response = {
             id: user.id,
             username: user.username,
-            nome: user.nome, // Verifique se 'nome' existe no modelo
+            nome: user.nome,
             email: user.email,
         };
         return res.status(200).json(response);

@@ -13,8 +13,8 @@ const photoSchema = new mongoose_1.default.Schema({
         required: true,
     },
     src: { type: String, required: true },
-    peso: { type: Number },
-    idade: { type: Number },
+    personagem: { type: String },
+    epoca: { type: String },
     acessos: { type: Number, default: 0 },
 }, { timestamps: true });
 exports.default = mongoose_1.default.model('Photo', photoSchema);
