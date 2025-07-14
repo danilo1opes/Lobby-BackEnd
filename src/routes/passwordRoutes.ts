@@ -42,7 +42,7 @@ router.post('/password/lost', async (req: Request, res: Response) => {
       username: user.username,
     });
     const resetUrl = `${url}/?key=${resetToken}&login=${encodeURIComponent(
-      user.username
+      user.username,
     )}`;
 
     console.log('Enviando email para:', user.email, 'com URL:', resetUrl);
@@ -61,7 +61,7 @@ router.post('/password/lost', async (req: Request, res: Response) => {
       details:
         process.env.NODE_ENV === 'development'
           ? (error as Error).message
-          : undefined, 
+          : undefined,
     });
   }
 });
