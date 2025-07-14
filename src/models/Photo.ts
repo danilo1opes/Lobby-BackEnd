@@ -10,19 +10,20 @@
 //       required: true,
 //     },
 //     src: { type: String, required: true },
-//     peso: { type: Number },
-//     idade: { type: Number },
+//     peso: { type: String },
+//     idade: { type: String },
 //     acessos: { type: Number, default: 0 },
 //   },
-//   { timestamps: true }
+//   { timestamps: true },
 // );
+
 // interface IPhoto extends mongoose.Document {
 //   title: string;
 //   content: string;
 //   author: mongoose.Types.ObjectId;
 //   src: string;
-//   peso?: number;
-//   idade?: number;
+//   peso?: string; // Atualizado para string
+//   idade?: string; // Atualizado para string
 //   acessos: number;
 //   createdAt?: Date;
 //   updatedAt?: Date;
@@ -42,8 +43,8 @@ const photoSchema = new mongoose.Schema(
       required: true,
     },
     src: { type: String, required: true },
-    peso: { type: String },
-    idade: { type: String }, 
+    personagem: { type: String },
+    epoca: { type: String },
     acessos: { type: Number, default: 0 },
   },
   { timestamps: true },
@@ -54,8 +55,8 @@ interface IPhoto extends mongoose.Document {
   content: string;
   author: mongoose.Types.ObjectId;
   src: string;
-  peso?: string; // Atualizado para string
-  idade?: string; // Atualizado para string
+  personagem?: string;
+  epoca?: string; 
   acessos: number;
   createdAt?: Date;
   updatedAt?: Date;
