@@ -46,5 +46,3 @@ Essa estrutura promove uma comunidade engajada para jogadores exibirem suas hist
 - `DELETE /photo/:id` – Remove foto e comentários, com verificação de permissão.
 - **Autenticação** – JWT protege as rotas e valida usuários.
 - **Upload de Imagens** – JPEG, JPG e PNG com limite de 5MB.
-
-
