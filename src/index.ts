@@ -14,7 +14,7 @@ const app: Express = express();
 
 // Configurar CORS
 app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', 'http://localhost:3000'); // Permite localhost:3000
+  res.header('Access-Control-Allow-Origin', 'http://localhost:3000');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   if (req.method === 'OPTIONS') return res.sendStatus(200);
@@ -22,7 +22,7 @@ app.use((req, res, next) => {
 });
 
 app.use(express.json());
-app.use('/uploads', express.static('uploads')); // Serve a pasta uploads na raiz
+app.use('/uploads', express.static('uploads'));
 
 app.get('/', (req, res) => {
   res.send('Lobby Api');
@@ -40,7 +40,6 @@ app.get('/json', (req, res) => {
   res.json({ message: 'API está rodando' });
 });
 
-// Iniciar servidor na porta do ambiente
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);

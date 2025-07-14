@@ -2,11 +2,10 @@ import { Router, Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import User, { IUser } from '../models/User';
-import { authMiddleware, generateToken } from '../middleware/auth'; // Verifique a implementação
+import { authMiddleware, generateToken } from '../middleware/auth'; 
 
 const router = Router();
 
-// Cadastro de usuário
 router.post('/user', async (req: Request, res: Response) => {
   try {
     const { email, username, password } = req.body;
@@ -26,14 +25,14 @@ router.post('/user', async (req: Request, res: Response) => {
       return res.status(409).json({ error: 'Email ou username já existe' });
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10); // Garante hash da senha
+    const hashedPassword = await bcrypt.hash(password, 10); 
     const user = new User({ email, username, password: hashedPassword });
     await user.save();
 
     const token = jwt.sign(
       { id: user._id, username },
       process.env.JWT_SECRET || 'fallback_secret',
-      { expiresIn: '1d' }
+      { expiresIn: '1d' },
     );
     return res.status(201).json({ id: user._id, token });
   } catch (error: any) {
@@ -42,7 +41,6 @@ router.post('/user', async (req: Request, res: Response) => {
   }
 });
 
-// Login de usuário
 router.post('/login', async (req: Request, res: Response) => {
   try {
     const { username, password } = req.body;
@@ -52,7 +50,7 @@ router.post('/login', async (req: Request, res: Response) => {
         .json({ error: 'Username e password são obrigatórios' });
     }
 
-    const user = await User.findOne({ username }).select('+password'); // Inclui o campo password
+    const user = await User.findOne({ username }).select('+password');
     if (!user) {
       return res.status(401).json({ error: 'Usuário não encontrado' });
     }
@@ -65,7 +63,7 @@ router.post('/login', async (req: Request, res: Response) => {
     const token = jwt.sign(
       { id: user._id, username },
       process.env.JWT_SECRET || 'fallback_secret',
-      { expiresIn: '1d' }
+      { expiresIn: '1d' },
     );
     return res.status(200).json({ token });
   } catch (error: any) {
@@ -74,7 +72,6 @@ router.post('/login', async (req: Request, res: Response) => {
   }
 });
 
-// GET /json/user - Fetch authenticated user details
 router.get('/user', authMiddleware, async (req: Request, res: Response) => {
   try {
     const user = (req as any).user;
@@ -86,7 +83,7 @@ router.get('/user', authMiddleware, async (req: Request, res: Response) => {
     const response = {
       id: user.id,
       username: user.username,
-      nome: user.nome, // Verifique se 'nome' existe no modelo
+      nome: user.nome,
       email: user.email,
     };
 

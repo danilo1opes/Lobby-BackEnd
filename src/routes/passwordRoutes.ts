@@ -55,19 +55,17 @@ router.post('/password/lost', async (req: Request, res: Response) => {
     console.log(`Email enviado para ${user.email} com token ${resetToken}`);
     return res.status(200).json({ message: 'Email enviado' });
   } catch (error: any) {
-    // Tipagem explícita como 'any' para capturar qualquer erro
     console.error('Erro no /password/lost:', error);
     return res.status(500).json({
       error: 'Erro interno no servidor',
       details:
         process.env.NODE_ENV === 'development'
           ? (error as Error).message
-          : undefined, // Cast explícito para Error
+          : undefined, 
     });
   }
 });
 
-// POST /json/password/reset - Reset password
 router.post('/password/reset', async (req: Request, res: Response) => {
   try {
     const { login, password, key } = req.body;
