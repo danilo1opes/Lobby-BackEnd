@@ -2,6 +2,7 @@ import express, { Express } from 'express';
 import dotenv from 'dotenv';
 import connectDB from './config/database';
 import cors from 'cors';
+import path from 'path';
 import userRoutes from './routes/userRoutes';
 import photoRoutes from './routes/photoRoutes';
 import commentRoutes from './routes/commentRoutes';
@@ -12,7 +13,6 @@ dotenv.config();
 
 const app: Express = express();
 
-// Configurar CORS
 const corsOptions = {
   origin: ['https://nyxlobby.vercel.app', 'http://localhost:3000'],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -20,9 +20,6 @@ const corsOptions = {
   credentials: true,
 };
 app.use(cors(corsOptions));
-
-app.use(express.json());
-app.use('/uploads', express.static('uploads'));
 
 app.get('/', (req, res) => {
   res.send('Lobby Api');
@@ -44,3 +41,9 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
+
+const uploadsPath =
+  process.env.NODE_ENV === 'production'
+    ? path.join(__dirname, '../uploads')
+    : path.join(__dirname, '../uploads');
+app.use('/uploads', express.static(uploadsPath));
