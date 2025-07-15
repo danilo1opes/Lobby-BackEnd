@@ -8,8 +8,9 @@
     "moduleResolution": "node",
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true
+    "forceConsistentCasingInFileNames": true,
+    "sourceMap": false
   },
-  "include": ["src/**/*"],
+  "include": ["src/**/*", "src/polyfills.ts"],
   "exclude": ["node_modules"]
 }
