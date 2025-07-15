@@ -237,7 +237,7 @@ const s3Client = new client_s3_1.S3Client({
         secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
     },
 });
-const BUCKET_NAME = process.env.AWS_BUCKET_NAME || 'lobby-images';
+const BUCKET_NAME = process.env.AWS_BUCKET_NAME || 'nyxlobby-uploads';
 // Configuração do multer para usar memória temporariamente
 const storage = multer_1.default.memoryStorage();
 const fileFilter = (req, file, cb) => {
