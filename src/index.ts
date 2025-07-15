@@ -24,35 +24,42 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(express.json());
 
-app.get('/', (req, res) => {
-  res.send('Lobby API');
-});
-
 // Conectar ao MongoDB
 connectDB().catch((err) => console.error('MongoDB connection error:', err));
 
-// Prefixo para todas as rotas de API
-app.use('/json', userRoutes);
-app.use('/json', photoRoutes);
-app.use('/json', commentRoutes);
-app.use('/json', statsRoutes);
-app.use('/json', passwordRoutes);
+// IMPORTANTE: Rotas da API DEVEM vir ANTES da rota coringa
+app.get('/', (req, res) => {
+  res.send('Lobby API');
+});
 
 // Rota de status da API
 app.get('/json', (req, res) => {
   res.json({ message: 'API está rodando' });
 });
 
-// Middleware para rotas /json não encontradas
-app.use('/json', (req, res) => {
+// Todas as rotas da API com prefixo /json
+app.use('/json', userRoutes);
+app.use('/json', photoRoutes);
+app.use('/json', commentRoutes);
+app.use('/json', statsRoutes);
+app.use('/json', passwordRoutes);
+
+// Middleware para rotas /json não encontradas (404 para API)
+app.use('/json/*', (req, res) => {
   res.status(404).json({ error: 'Rota de API não encontrada' });
 });
 
 // Servir arquivos estáticos (para frontend)
 app.use(express.static(path.join(__dirname, '../public')));
 
-// Rota coringa SPA (HTML) — chamada só quando não for rota de API
+// Rota coringa SPA (HTML) — DEVE vir por ÚLTIMO
+// Só será chamada para rotas que não sejam /json
 app.get('*', (req, res) => {
+  // Se for uma rota que começa com /json, não deveria chegar aqui
+  if (req.path.startsWith('/json')) {
+    return res.status(404).json({ error: 'Rota de API não encontrada' });
+  }
+  
   res.sendFile(path.join(__dirname, '../public/index.html'), (err) => {
     if (err) {
       console.error('Erro ao servir index.html:', err.message);
