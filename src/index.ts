@@ -7,6 +7,7 @@ import photoRoutes from './routes/photoRoutes';
 import commentRoutes from './routes/commentRoutes';
 import statsRoutes from './routes/statsRoutes';
 import passwordRoutes from './routes/passwordRoutes';
+import path from 'path';
 
 dotenv.config();
 
@@ -45,4 +46,14 @@ app.get('/json', (req, res) => {
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+});
+
+app.use(express.static(path.join(__dirname, '../public')));
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/index.html'), (err) => {
+    if (err) {
+      console.error('Erro ao servir index.html:', err.message);
+      res.status(404).send('Página não encontrada');
+    }
+  });
 });
