@@ -229,36 +229,74 @@ const Comment_1 = __importDefault(require("../models/Comment"));
 const User_1 = __importDefault(require("../models/User"));
 const auth_1 = require("../middleware/auth");
 const path_1 = __importDefault(require("path"));
+const fs_1 = __importDefault(require("fs"));
 const router = (0, express_1.Router)();
-// Configuração do AWS S3
-const s3 = new aws_sdk_1.default.S3({
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-    region: process.env.AWS_REGION || 'us-east-1',
-    signatureVersion: 'v4',
-});
-// Configuração do multer para S3
-const upload = (0, multer_1.default)({
-    storage: (0, multer_s3_1.default)({
-        s3: s3,
-        bucket: process.env.AWS_BUCKET_NAME || 'lobby-uploads',
-        contentType: multer_s3_1.default.AUTO_CONTENT_TYPE,
-        key: function (req, file, cb) {
+// Verificar se AWS está configurado
+const isAWSConfigured = process.env.AWS_ACCESS_KEY_ID &&
+    process.env.AWS_SECRET_ACCESS_KEY &&
+    process.env.AWS_BUCKET_NAME;
+console.log('AWS configurado:', isAWSConfigured);
+let upload;
+if (isAWSConfigured) {
+    // Configuração AWS S3
+    const s3 = new aws_sdk_1.default.S3({
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+        region: process.env.AWS_REGION || 'us-east-2',
+        signatureVersion: 'v4',
+    });
+    upload = (0, multer_1.default)({
+        storage: (0, multer_s3_1.default)({
+            s3: s3,
+            bucket: process.env.AWS_BUCKET_NAME || 'lobby-uploads',
+            contentType: multer_s3_1.default.AUTO_CONTENT_TYPE,
+            key: function (req, file, cb) {
+                const filename = `${Date.now()}-${file.originalname.replace(/\s+/g, '-')}`;
+                cb(null, filename);
+            },
+        }),
+        fileFilter: (req, file, cb) => {
+            const allowedTypes = /jpeg|jpg|png/;
+            const extname = allowedTypes.test(path_1.default.extname(file.originalname).toLowerCase());
+            const mimetype = allowedTypes.test(file.mimetype);
+            if (extname && mimetype) {
+                return cb(null, true);
+            }
+            cb(new Error('Apenas arquivos de imagem (jpeg, jpg, png) são permitidos'));
+        },
+        limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+    }).single('img');
+}
+else {
+    // Configuração local como fallback
+    console.log('Usando armazenamento local como fallback');
+    const storage = multer_1.default.diskStorage({
+        destination: (req, file, cb) => {
+            const uploadDir = path_1.default.join(__dirname, '../../uploads/');
+            if (!fs_1.default.existsSync(uploadDir)) {
+                fs_1.default.mkdirSync(uploadDir, { recursive: true });
+            }
+            cb(null, uploadDir);
+        },
+        filename: (req, file, cb) => {
             const filename = `${Date.now()}-${file.originalname.replace(/\s+/g, '-')}`;
             cb(null, filename);
         },
-    }),
-    fileFilter: (req, file, cb) => {
-        const allowedTypes = /jpeg|jpg|png/;
-        const extname = allowedTypes.test(path_1.default.extname(file.originalname).toLowerCase());
-        const mimetype = allowedTypes.test(file.mimetype);
-        if (extname && mimetype) {
-            return cb(null, true);
-        }
-        cb(new Error('Apenas arquivos de imagem (jpeg, jpg, png) são permitidos'));
-    },
-    limits: { fileSize: 8 * 1024 * 1024 },
-}).single('img');
+    });
+    upload = (0, multer_1.default)({
+        storage,
+        fileFilter: (req, file, cb) => {
+            const allowedTypes = /jpeg|jpg|png/;
+            const extname = allowedTypes.test(path_1.default.extname(file.originalname).toLowerCase());
+            const mimetype = allowedTypes.test(file.mimetype);
+            if (extname && mimetype) {
+                return cb(null, true);
+            }
+            cb(new Error('Apenas arquivos de imagem (jpeg, jpg, png) são permitidos'));
+        },
+        limits: { fileSize: 8 * 1024 * 1024 }, // 8MB
+    }).single('img');
+}
 router.post('/photo', auth_1.authMiddleware, (req, res, next) => {
     upload(req, res, (err) => {
         if (err) {
@@ -282,7 +320,14 @@ router.post('/photo', auth_1.authMiddleware, (req, res, next) => {
             });
             return res.status(422).json({ error: 'Dados incompletos' });
         }
-        const src = req.file.location;
+        // URL depende se está usando S3 ou local
+        let src;
+        if (isAWSConfigured) {
+            src = req.file.location; // URL do S3
+        }
+        else {
+            src = `https://lobby-backend-7r4k.onrender.com/uploads/${req.file.filename}`;
+        }
         console.log('Salvando foto com src:', src);
         const photo = new Photo_1.default({
             title: nome,
@@ -319,14 +364,17 @@ router.get('/photo/:id', (req, res) => __awaiter(void 0, void 0, void 0, functio
         photo.acessos += 1;
         yield photo.save();
         const comments = yield Comment_1.default.find({ post: photo._id }).populate('author', 'username');
+        // Placeholder URL depende da configuração
+        const placeholderUrl = isAWSConfigured
+            ? `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/placeholder.jpg`
+            : 'https://lobby-backend-7r4k.onrender.com/uploads/placeholder.jpg';
         const response = {
             photo: {
                 id: photo._id,
                 author: photo.author ? photo.author.username : 'Unknown',
                 title: photo.title,
                 date: photo.createdAt,
-                src: photo.src ||
-                    `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/placeholder.jpg`,
+                src: photo.src || placeholderUrl,
                 personagem: photo.personagem,
                 epoca: photo.epoca,
                 acessos: photo.acessos,
@@ -368,14 +416,17 @@ router.get('/photo', (req, res) => __awaiter(void 0, void 0, void 0, function* (
             .populate('author', 'username')
             .skip((_page - 1) * _total)
             .limit(_total);
+        // Placeholder URL depende da configuração
+        const placeholderUrl = isAWSConfigured
+            ? `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/placeholder.jpg`
+            : 'https://lobby-backend-7r4k.onrender.com/uploads/placeholder.jpg';
         const response = yield Promise.all(photos.map((photo) => __awaiter(void 0, void 0, void 0, function* () {
             return ({
                 id: photo._id,
                 author: photo.author ? photo.author.username : 'Unknown',
                 title: photo.title,
                 date: photo.createdAt,
-                src: photo.src ||
-                    `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/placeholder.jpg`,
+                src: photo.src || placeholderUrl,
                 personagem: photo.personagem,
                 epoca: photo.epoca,
                 acessos: photo.acessos,
@@ -396,20 +447,35 @@ router.delete('/photo/:id', auth_1.authMiddleware, (req, res) => __awaiter(void 
         const photo = yield Photo_1.default.findById(req.params.id);
         if (!photo || photo.author.toString() !== user.id)
             return res.status(401).json({ error: 'Sem permissão' });
-        if (photo.src) {
-            try {
-                const url = new URL(photo.src);
-                const key = url.pathname.substring(1);
-                yield s3
-                    .deleteObject({
-                    Bucket: process.env.AWS_BUCKET_NAME || 'lobby-uploads',
-                    Key: key,
-                })
-                    .promise();
-                console.log('Imagem deletada do S3:', key);
+        if (isAWSConfigured) {
+            // Deletar do S3
+            if (photo.src) {
+                try {
+                    const s3 = new aws_sdk_1.default.S3({
+                        accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+                        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+                        region: process.env.AWS_REGION || 'us-east-1',
+                    });
+                    const url = new URL(photo.src);
+                    const key = url.pathname.substring(1); // Remove a primeira barra
+                    yield s3
+                        .deleteObject({
+                        Bucket: process.env.AWS_BUCKET_NAME || 'lobby-uploads',
+                        Key: key,
+                    })
+                        .promise();
+                    console.log('Imagem deletada do S3:', key);
+                }
+                catch (s3Error) {
+                    console.error('Erro ao deletar do S3:', s3Error);
+                }
             }
-            catch (s3Error) {
-                console.error('Erro ao deletar do S3:', s3Error);
+        }
+        else {
+            // Deletar arquivo local
+            if (photo.src &&
+                fs_1.default.existsSync(path_1.default.join(__dirname, '../../uploads/', path_1.default.basename(photo.src)))) {
+                fs_1.default.unlinkSync(path_1.default.join(__dirname, '../../uploads/', path_1.default.basename(photo.src)));
             }
         }
         yield Photo_1.default.deleteOne({ _id: req.params.id });

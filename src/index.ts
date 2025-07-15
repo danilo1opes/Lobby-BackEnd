@@ -7,6 +7,7 @@ import photoRoutes from './routes/photoRoutes';
 import commentRoutes from './routes/commentRoutes';
 import statsRoutes from './routes/statsRoutes';
 import passwordRoutes from './routes/passwordRoutes';
+import path from 'path';
 
 dotenv.config();
 
@@ -22,6 +23,18 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 app.use(express.json());
+
+// Servir arquivos estáticos apenas se AWS não estiver configurado
+const isAWSConfigured =
+  process.env.AWS_ACCESS_KEY_ID &&
+  process.env.AWS_SECRET_ACCESS_KEY &&
+  process.env.AWS_BUCKET_NAME;
+
+if (!isAWSConfigured) {
+  console.log('Servindo arquivos estáticos localmente');
+  const uploadsPath = path.join(__dirname, '../uploads');
+  app.use('/uploads', express.static(uploadsPath));
+}
 
 app.get('/', (req, res) => {
   res.send('Lobby Api');
