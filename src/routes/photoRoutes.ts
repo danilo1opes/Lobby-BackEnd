@@ -1,54 +1,48 @@
 import { Router, Request, Response } from 'express';
 import multer from 'multer';
-import multerS3 from 'multer-s3';
-import AWS from 'aws-sdk';
 import Photo from '../models/Photo';
 import Comment from '../models/Comment';
 import User from '../models/User';
 import { authMiddleware } from '../middleware/auth';
 import path from 'path';
+import fs from 'fs';
 
 const router = Router();
 
-// Configuração do AWS S3
-const s3 = new AWS.S3({
-  accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-  region: process.env.AWS_REGION || 'us-east-2',
-  signatureVersion: 'v4',
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const uploadDir = path.join(__dirname, '../../uploads/');
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    cb(null, uploadDir);
+  },
+  filename: (req, file, cb) => {
+    const filename = `${Date.now()}-${file.originalname.replace(/\s+/g, '-')}`;
+    cb(null, filename);
+  },
 });
 
-// Configuração do multer para S3
-const upload = multer({
-  storage: multerS3({
-    s3: s3 as any,
-    bucket: process.env.AWS_BUCKET_NAME || 'lobby-uploads',
-    contentType: multerS3.AUTO_CONTENT_TYPE,
-    key: function (req, file, cb) {
-      const filename = `${Date.now()}-${file.originalname.replace(
-        /\s+/g,
-        '-',
-      )}`;
-      cb(null, filename);
-    },
-  }),
-  fileFilter: (
-    req: Request,
-    file: Express.Multer.File,
-    cb: multer.FileFilterCallback,
-  ) => {
-    const allowedTypes = /jpeg|jpg|png/;
-    const extname = allowedTypes.test(
-      path.extname(file.originalname).toLowerCase(),
-    );
-    const mimetype = allowedTypes.test(file.mimetype);
+const fileFilter = (
+  req: Request,
+  file: Express.Multer.File,
+  cb: multer.FileFilterCallback,
+) => {
+  const allowedTypes = /jpeg|jpg|png/;
+  const extname = allowedTypes.test(
+    path.extname(file.originalname).toLowerCase(),
+  );
+  const mimetype = allowedTypes.test(file.mimetype);
+  if (extname && mimetype) {
+    return cb(null, true);
+  }
+  cb(new Error('Apenas arquivos de imagem (jpeg, jpg, png) são permitidos'));
+};
 
-    if (extname && mimetype) {
-      return cb(null, true);
-    }
-    cb(new Error('Apenas arquivos de imagem (jpeg, jpg, png) são permitidos'));
-  },
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+const upload = multer({
+  storage,
+  fileFilter,
+  limits: { fileSize: 8 * 1024 * 1024 },
 }).single('img');
 
 router.post(
@@ -80,9 +74,8 @@ router.post(
         return res.status(422).json({ error: 'Dados incompletos' });
       }
 
-      const src = (req.file as any).location;
+      const src = `https://lobby-backend-7r4k.onrender.com/uploads/${req.file.filename}`;
       console.log('Salvando foto com src:', src);
-
       const photo = new Photo({
         title: nome,
         content: nome,
@@ -136,7 +129,7 @@ router.get('/photo/:id', async (req: Request, res: Response) => {
         date: photo.createdAt,
         src:
           photo.src ||
-          `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/placeholder.jpg`,
+          'https://lobby-backend-7r4k.onrender.com/uploads/placeholder.jpg',
         personagem: photo.personagem,
         epoca: photo.epoca,
         acessos: photo.acessos,
@@ -189,7 +182,7 @@ router.get('/photo', async (req: Request, res: Response) => {
         date: photo.createdAt,
         src:
           photo.src ||
-          `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/placeholder.jpg`,
+          'https://lobby-backend-7r4k.onrender.com/uploads/placeholder.jpg',
         personagem: photo.personagem,
         epoca: photo.epoca,
         acessos: photo.acessos,
@@ -216,28 +209,22 @@ router.delete(
       if (!photo || photo.author.toString() !== user.id)
         return res.status(401).json({ error: 'Sem permissão' });
 
-      if (photo.src) {
-        try {
-          const url = new URL(photo.src);
-          const key = url.pathname.substring(1);
-
-          await s3
-            .deleteObject({
-              Bucket: process.env.AWS_BUCKET_NAME || 'lobby-uploads',
-              Key: key,
-            })
-            .promise();
-        } catch (s3Error) {
-          console.error('Erro ao deletar do S3:', s3Error);
-        }
-      }
-
       await Photo.deleteOne({ _id: req.params.id });
       await Comment.deleteMany({ post: req.params.id });
 
+      if (
+        photo.src &&
+        fs.existsSync(
+          path.join(__dirname, '../../uploads/', path.basename(photo.src)),
+        )
+      ) {
+        fs.unlinkSync(
+          path.join(__dirname, '../../uploads/', path.basename(photo.src)),
+        );
+      }
+
       return res.status(200).json('Post deletado');
     } catch (error) {
-      console.error('Erro no DELETE /photo/:id:', error);
       return res.status(500).json({ error: 'Erro interno no servidor' });
     }
   },
