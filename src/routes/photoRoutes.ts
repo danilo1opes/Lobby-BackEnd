@@ -257,7 +257,7 @@ const s3Client = new S3Client({
   },
 });
 
-const BUCKET_NAME = process.env.AWS_BUCKET_NAME || 'lobby-images';
+const BUCKET_NAME = process.env.AWS_BUCKET_NAME || 'nyxlobby-uploads';
 
 // Configuração do multer para usar memória temporariamente
 const storage = multer.memoryStorage();
