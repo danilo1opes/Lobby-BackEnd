@@ -25,30 +25,33 @@ app.use(cors(corsOptions));
 app.use(express.json());
 
 app.get('/', (req, res) => {
-  res.send('Lobby Api');
+  res.send('Lobby API');
 });
 
 // Conectar ao MongoDB
 connectDB().catch((err) => console.error('MongoDB connection error:', err));
 
-// Rotas
+// Prefixo para todas as rotas de API
 app.use('/json', userRoutes);
 app.use('/json', photoRoutes);
 app.use('/json', commentRoutes);
 app.use('/json', statsRoutes);
 app.use('/json', passwordRoutes);
 
+// Rota de status da API
 app.get('/json', (req, res) => {
   res.json({ message: 'API está rodando' });
 });
 
-// Iniciar servidor
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+// Middleware para rotas /json não encontradas
+app.use('/json', (req, res) => {
+  res.status(404).json({ error: 'Rota de API não encontrada' });
 });
 
+// Servir arquivos estáticos (para frontend)
 app.use(express.static(path.join(__dirname, '../public')));
+
+// Rota coringa SPA (HTML) — chamada só quando não for rota de API
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '../public/index.html'), (err) => {
     if (err) {
@@ -56,4 +59,10 @@ app.get('*', (req, res) => {
       res.status(404).send('Página não encontrada');
     }
   });
+});
+
+// Iniciar servidor
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
 });

@@ -211,29 +211,6 @@ router.get('/photo', async (req, res) => {
         return res.status(500).json({ error: 'Erro interno no servidor' });
     }
 });
-// router.delete(
-//   '/photo/:id',
-//   authMiddleware,
-//   async (req: Request, res: Response) => {
-//     try {
-//       const user = (req as any).user;
-//       const photo = await Photo.findById(req.params.id);
-//       if (!photo || photo.author.toString() !== user.id)
-//         return res.status(401).json({ error: 'Sem permissão' });
-//       // Deletar do S3
-//       if (photo.src && photo.src.includes('amazonaws.com')) {
-//         await deleteFromS3(photo.src);
-//         console.log('Arquivo deletado do S3:', photo.src);
-//       }
-//       await Photo.deleteOne({ _id: req.params.id });
-//       await Comment.deleteMany({ post: req.params.id });
-//       return res.status(200).json('Post deletado');
-//     } catch (error) {
-//       console.error('Erro no DELETE /photo/:id:', error);
-//       return res.status(500).json({ error: 'Erro interno no servidor' });
-//     }
-//   },
-// );
 router.delete('/photo/:id', auth_1.authMiddleware, async (req, res) => {
     try {
         const user = req.user;
@@ -246,7 +223,6 @@ router.delete('/photo/:id', auth_1.authMiddleware, async (req, res) => {
         }
         await Photo_1.default.deleteOne({ _id: req.params.id });
         await Comment_1.default.deleteMany({ post: req.params.id });
-        // Retornar um redirecionamento para o frontend
         return res
             .status(200)
             .json({ message: 'Post deletado', redirect: '/photo' });
