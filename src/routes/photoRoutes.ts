@@ -301,10 +301,11 @@ async function uploadToS3(file: Express.Multer.File): Promise<string> {
     await s3Client.send(command);
     return `https://${BUCKET_NAME}.s3.amazonaws.com/${key}`;
   } catch (error) {
-    console.error('Erro no upload S3:', error);
+    console.error('Erro no upload S3:', JSON.stringify(error, null, 2));
     throw new Error('Falha no upload da imagem');
   }
 }
+
 
 // Função para deletar do S3
 async function deleteFromS3(url: string): Promise<void> {

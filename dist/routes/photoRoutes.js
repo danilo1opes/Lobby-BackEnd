@@ -270,7 +270,7 @@ function uploadToS3(file) {
             return `https://${BUCKET_NAME}.s3.amazonaws.com/${key}`;
         }
         catch (error) {
-            console.error('Erro no upload S3:', error);
+            console.error('Erro no upload S3:', JSON.stringify(error, null, 2));
             throw new Error('Falha no upload da imagem');
         }
     });
