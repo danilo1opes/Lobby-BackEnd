@@ -48,7 +48,10 @@ router.post(
   authMiddleware,
   (req: Request, res: Response, next) => {
     upload(req, res, (err) => {
-      if (err) return res.status(400).json({ error: err.message });
+      if (err) {
+        console.error('Erro no upload:', err.message);
+        return res.status(400).json({ error: err.message });
+      }
       next();
     });
   },
@@ -59,10 +62,18 @@ router.post(
         return res.status(401).json({ error: 'Usuário não possui permissão' });
 
       const { nome, personagem, epoca } = req.body;
-      if (!nome || !personagem || !epoca || !req.file)
+      if (!nome || !personagem || !epoca || !req.file) {
+        console.warn('Dados incompletos:', {
+          nome,
+          personagem,
+          epoca,
+          file: req.file,
+        });
         return res.status(422).json({ error: 'Dados incompletos' });
+      }
 
       const src = `https://lobby-backend-7r4k.onrender.com/uploads/${req.file.filename}`;
+      console.log('Salvando foto com src:', src);
       const photo = new Photo({
         title: nome,
         content: nome,
@@ -79,7 +90,7 @@ router.post(
           id: photo._id,
           author: user.id,
           title: nome,
-          src,
+          src, // Garantir que src seja retornado
           personagem,
           epoca,
           acessos: 0,
@@ -114,7 +125,9 @@ router.get('/photo/:id', async (req: Request, res: Response) => {
         author: photo.author ? (photo.author as any).username : 'Unknown',
         title: photo.title,
         date: photo.createdAt,
-        src: photo.src,
+        src:
+          photo.src ||
+          'https://lobby-backend-7r4k.onrender.com/uploads/placeholder.jpg',
         personagem: photo.personagem,
         epoca: photo.epoca,
         acessos: photo.acessos,
@@ -165,7 +178,9 @@ router.get('/photo', async (req: Request, res: Response) => {
         author: photo.author ? (photo.author as any).username : 'Unknown',
         title: photo.title,
         date: photo.createdAt,
-        src: photo.src,
+        src:
+          photo.src ||
+          'https://lobby-backend-7r4k.onrender.com/uploads/placeholder.jpg',
         personagem: photo.personagem,
         epoca: photo.epoca,
         acessos: photo.acessos,
