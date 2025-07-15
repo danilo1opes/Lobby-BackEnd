@@ -7,7 +7,6 @@ import photoRoutes from './routes/photoRoutes';
 import commentRoutes from './routes/commentRoutes';
 import statsRoutes from './routes/statsRoutes';
 import passwordRoutes from './routes/passwordRoutes';
-import path from 'path';
 
 dotenv.config();
 
@@ -20,14 +19,9 @@ const corsOptions = {
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
 };
+
 app.use(cors(corsOptions));
-
 app.use(express.json());
-
-const uploadsPath = path.join(__dirname, '../uploads');
-app.use('/uploads', express.static(uploadsPath));
-
-console.log('Uploads path:', uploadsPath);
 
 app.get('/', (req, res) => {
   res.send('Lobby Api');
