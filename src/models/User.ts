@@ -8,7 +8,7 @@ const userSchema = new mongoose.Schema({
 });
 
 export interface IUser extends mongoose.Document {
-  _id: mongoose.Types.ObjectId; // adicionar explicitamente
+  _id: mongoose.Types.ObjectId;
   email: string;
   username: string;
   password: string;
