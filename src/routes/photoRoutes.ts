@@ -294,7 +294,6 @@ async function uploadToS3(file: Express.Multer.File): Promise<string> {
     Key: key,
     Body: file.buffer,
     ContentType: file.mimetype,
-    ACL: 'public-read',
   });
 
   try {
@@ -305,7 +304,6 @@ async function uploadToS3(file: Express.Multer.File): Promise<string> {
     throw new Error('Falha no upload da imagem');
   }
 }
-
 
 // Função para deletar do S3
 async function deleteFromS3(url: string): Promise<void> {
