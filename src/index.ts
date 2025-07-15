@@ -24,17 +24,10 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(express.json());
 
-// Servir arquivos estáticos apenas se AWS não estiver configurado
-const isAWSConfigured =
-  process.env.AWS_ACCESS_KEY_ID &&
-  process.env.AWS_SECRET_ACCESS_KEY &&
-  process.env.AWS_BUCKET_NAME;
-
-if (!isAWSConfigured) {
-  console.log('Servindo arquivos estáticos localmente');
-  const uploadsPath = path.join(__dirname, '../uploads');
-  app.use('/uploads', express.static(uploadsPath));
-}
+// Servir arquivos estáticos
+const uploadsPath = path.join(__dirname, '../uploads');
+app.use('/uploads', express.static(uploadsPath));
+console.log('Uploads path:', uploadsPath);
 
 app.get('/', (req, res) => {
   res.send('Lobby Api');
