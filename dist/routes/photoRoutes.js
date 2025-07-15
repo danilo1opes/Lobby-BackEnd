@@ -227,35 +227,23 @@ const Comment_1 = __importDefault(require("../models/Comment"));
 const User_1 = __importDefault(require("../models/User"));
 const auth_1 = require("../middleware/auth");
 const path_1 = __importDefault(require("path"));
-const fs_1 = __importDefault(require("fs"));
+const client_s3_1 = require("@aws-sdk/client-s3");
 const router = (0, express_1.Router)();
-// Configuração do multer com debug
-const storage = multer_1.default.diskStorage({
-    destination: (req, file, cb) => {
-        const uploadDir = path_1.default.join(__dirname, '../../uploads/');
-        console.log('Upload directory:', uploadDir);
-        if (!fs_1.default.existsSync(uploadDir)) {
-            fs_1.default.mkdirSync(uploadDir, { recursive: true });
-            console.log('Created upload directory');
-        }
-        cb(null, uploadDir);
-    },
-    filename: (req, file, cb) => {
-        const filename = `${Date.now()}-${file.originalname.replace(/\s+/g, '-')}`;
-        console.log('Generated filename:', filename);
-        cb(null, filename);
+// Configuração do S3 Client (SDK v3)
+const s3Client = new client_s3_1.S3Client({
+    region: process.env.AWS_REGION || 'us-east-2',
+    credentials: {
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
     },
 });
+const BUCKET_NAME = process.env.AWS_BUCKET_NAME || 'lobby-images';
+// Configuração do multer para usar memória temporariamente
+const storage = multer_1.default.memoryStorage();
 const fileFilter = (req, file, cb) => {
     const allowedTypes = /jpeg|jpg|png|gif|webp/;
     const extname = allowedTypes.test(path_1.default.extname(file.originalname).toLowerCase());
     const mimetype = allowedTypes.test(file.mimetype);
-    console.log('File validation:', {
-        originalname: file.originalname,
-        mimetype: file.mimetype,
-        extname: path_1.default.extname(file.originalname),
-        valid: extname && mimetype,
-    });
     if (extname && mimetype) {
         return cb(null, true);
     }
@@ -266,15 +254,53 @@ const upload = (0, multer_1.default)({
     fileFilter,
     limits: { fileSize: 8 * 1024 * 1024 }, // 8MB
 }).single('img');
-// Rota para testar se o servidor está servindo arquivos estáticos
-router.get('/test-upload', (req, res) => {
-    const uploadsPath = path_1.default.join(__dirname, '../../uploads/');
-    const files = fs_1.default.existsSync(uploadsPath) ? fs_1.default.readdirSync(uploadsPath) : [];
+// Função para fazer upload para S3
+function uploadToS3(file) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const key = `uploads/${Date.now()}-${file.originalname.replace(/\s+/g, '-')}`;
+        const command = new client_s3_1.PutObjectCommand({
+            Bucket: BUCKET_NAME,
+            Key: key,
+            Body: file.buffer,
+            ContentType: file.mimetype,
+            ACL: 'public-read',
+        });
+        try {
+            yield s3Client.send(command);
+            return `https://${BUCKET_NAME}.s3.amazonaws.com/${key}`;
+        }
+        catch (error) {
+            console.error('Erro no upload S3:', error);
+            throw new Error('Falha no upload da imagem');
+        }
+    });
+}
+// Função para deletar do S3
+function deleteFromS3(url) {
+    return __awaiter(this, void 0, void 0, function* () {
+        try {
+            const key = url.split('.com/')[1];
+            const command = new client_s3_1.DeleteObjectCommand({
+                Bucket: BUCKET_NAME,
+                Key: key,
+            });
+            yield s3Client.send(command);
+        }
+        catch (error) {
+            console.error('Erro ao deletar do S3:', error);
+        }
+    });
+}
+// Rota para testar configuração
+router.get('/test-config', (req, res) => {
     res.json({
-        uploadsPath,
-        exists: fs_1.default.existsSync(uploadsPath),
-        files,
-        serverUrl: req.protocol + '://' + req.get('host'),
+        awsConfigured: !!(process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY),
+        bucketName: BUCKET_NAME,
+        region: process.env.AWS_REGION || 'us-east-1',
+        hasCredentials: {
+            accessKeyId: !!process.env.AWS_ACCESS_KEY_ID,
+            secretAccessKey: !!process.env.AWS_SECRET_ACCESS_KEY,
+        },
     });
 });
 router.post('/photo', auth_1.authMiddleware, (req, res, next) => {
@@ -296,23 +322,21 @@ router.post('/photo', auth_1.authMiddleware, (req, res, next) => {
                 nome,
                 personagem,
                 epoca,
-                file: req.file,
+                file: !!req.file,
             });
             return res.status(422).json({ error: 'Dados incompletos' });
         }
-        // Verificar se o arquivo foi realmente salvo
-        const filePath = path_1.default.join(__dirname, '../../uploads/', req.file.filename);
-        const fileExists = fs_1.default.existsSync(filePath);
-        console.log('File check:', {
-            filename: req.file.filename,
-            filePath,
-            exists: fileExists,
-            size: fileExists ? fs_1.default.statSync(filePath).size : 0,
-        });
-        // Construir URL baseada no host atual
-        const baseUrl = `${req.protocol}://${req.get('host')}`;
-        const src = `${baseUrl}/uploads/${req.file.filename}`;
-        console.log('Salvando foto com src:', src);
+        // Verificar se as credenciais AWS estão configuradas
+        if (!process.env.AWS_ACCESS_KEY_ID ||
+            !process.env.AWS_SECRET_ACCESS_KEY) {
+            console.error('Credenciais AWS não configuradas');
+            return res
+                .status(500)
+                .json({ error: 'Configuração do servidor incompleta' });
+        }
+        // Upload para S3
+        const src = yield uploadToS3(req.file);
+        console.log('Upload S3 realizado com sucesso:', src);
         const photo = new Photo_1.default({
             title: nome,
             content: nome,
@@ -333,17 +357,13 @@ router.post('/photo', auth_1.authMiddleware, (req, res, next) => {
                 epoca,
                 acessos: 0,
             },
-            debug: {
-                filename: req.file.filename,
-                fileExists,
-                baseUrl,
-                fullPath: filePath,
-            },
         });
     }
     catch (error) {
         console.error('Erro no /photo:', error);
-        return res.status(500).json({ error: 'Erro interno no servidor' });
+        return res
+            .status(500)
+            .json({ error: error.message || 'Erro interno no servidor' });
     }
 }));
 router.get('/photo/:id', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
@@ -354,24 +374,13 @@ router.get('/photo/:id', (req, res) => __awaiter(void 0, void 0, void 0, functio
         photo.acessos += 1;
         yield photo.save();
         const comments = yield Comment_1.default.find({ post: photo._id }).populate('author', 'username');
-        // Verificar se o arquivo ainda existe
-        let actualSrc = photo.src;
-        if (photo.src && photo.src.includes('/uploads/')) {
-            const filename = path_1.default.basename(photo.src);
-            const filePath = path_1.default.join(__dirname, '../../uploads/', filename);
-            const fileExists = fs_1.default.existsSync(filePath);
-            if (!fileExists) {
-                console.warn('Arquivo não encontrado:', filePath);
-                actualSrc = `${req.protocol}://${req.get('host')}/uploads/placeholder.jpg`;
-            }
-        }
         const response = {
             photo: {
                 id: photo._id,
                 author: photo.author ? photo.author.username : 'Unknown',
                 title: photo.title,
                 date: photo.createdAt,
-                src: actualSrc,
+                src: photo.src,
                 personagem: photo.personagem,
                 epoca: photo.epoca,
                 acessos: photo.acessos,
@@ -387,7 +396,6 @@ router.get('/photo/:id', (req, res) => __awaiter(void 0, void 0, void 0, functio
                 comment_date: comment.createdAt,
             })),
         };
-        console.log('GET /photo/:id - Resposta:', response);
         return res.status(200).json(response);
     }
     catch (error) {
@@ -414,30 +422,18 @@ router.get('/photo', (req, res) => __awaiter(void 0, void 0, void 0, function* (
             .skip((_page - 1) * _total)
             .limit(_total);
         const response = yield Promise.all(photos.map((photo) => __awaiter(void 0, void 0, void 0, function* () {
-            // Verificar se o arquivo ainda existe
-            let actualSrc = photo.src;
-            if (photo.src && photo.src.includes('/uploads/')) {
-                const filename = path_1.default.basename(photo.src);
-                const filePath = path_1.default.join(__dirname, '../../uploads/', filename);
-                const fileExists = fs_1.default.existsSync(filePath);
-                if (!fileExists) {
-                    console.warn('Arquivo não encontrado:', filePath);
-                    actualSrc = `${req.protocol}://${req.get('host')}/uploads/placeholder.jpg`;
-                }
-            }
-            return {
+            return ({
                 id: photo._id,
                 author: photo.author ? photo.author.username : 'Unknown',
                 title: photo.title,
                 date: photo.createdAt,
-                src: actualSrc,
+                src: photo.src,
                 personagem: photo.personagem,
                 epoca: photo.epoca,
                 acessos: photo.acessos,
                 total_comments: yield Comment_1.default.countDocuments({ post: photo._id }),
-            };
+            });
         })));
-        console.log('GET /photo - Resposta:', response);
         return res.status(200).json(response);
     }
     catch (error) {
@@ -451,14 +447,10 @@ router.delete('/photo/:id', auth_1.authMiddleware, (req, res) => __awaiter(void 
         const photo = yield Photo_1.default.findById(req.params.id);
         if (!photo || photo.author.toString() !== user.id)
             return res.status(401).json({ error: 'Sem permissão' });
-        // Deletar arquivo local
-        if (photo.src && photo.src.includes('/uploads/')) {
-            const filename = path_1.default.basename(photo.src);
-            const filePath = path_1.default.join(__dirname, '../../uploads/', filename);
-            if (fs_1.default.existsSync(filePath)) {
-                fs_1.default.unlinkSync(filePath);
-                console.log('Arquivo deletado:', filename);
-            }
+        // Deletar do S3
+        if (photo.src && photo.src.includes('amazonaws.com')) {
+            yield deleteFromS3(photo.src);
+            console.log('Arquivo deletado do S3:', photo.src);
         }
         yield Photo_1.default.deleteOne({ _id: req.params.id });
         yield Comment_1.default.deleteMany({ post: req.params.id });
