@@ -29,22 +29,21 @@
 
 // export default router;
 
-import { Router, Request, Response } from 'express';
+import { Router } from 'express';
 import Photo from '../models/Photo';
 import { authMiddleware } from '../middleware/auth';
 
 const router = Router();
 
-router.get('/stats', authMiddleware, async (req: Request, res: Response) => {
+router.get('/stats', authMiddleware, async (req, res) => {
+  console.log('Rota /stats atingida para usuário:', req.user?.id); // Log de depuração
   try {
-    const user = req.user; // Agora funciona sem erro
-    
+    const user = req.user;
     if (!user || !user.id) {
       return res.status(401).json({ error: 'Usuário não possui permissão' });
     }
 
-    console.log('Usuário autenticado:', user.id); // Log para depuração
-    
+    console.log('Usuário autenticado:', user.id); // Log de depuração
     const photos = await Photo.find({ author: user.id });
 
     const stats = photos.map((photo) => ({
