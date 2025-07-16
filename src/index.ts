@@ -77,7 +77,6 @@ import photoRoutes from './routes/photoRoutes';
 import commentRoutes from './routes/commentRoutes';
 import statsRoutes from './routes/statsRoutes';
 import passwordRoutes from './routes/passwordRoutes';
-import path from 'path';
 
 dotenv.config();
 
@@ -103,8 +102,22 @@ app.use((req, res, next) => {
   next();
 });
 
+// Rota raiz - informações sobre a API
 app.get('/', (req, res) => {
-  res.send('Lobby API');
+  res.json({ 
+    message: 'Lobby API', 
+    version: '1.0.0',
+    endpoints: [
+      'POST /json/user - Criar usuário',
+      'POST /json/token - Login',
+      'GET /json/user - Dados do usuário',
+      'GET /json/photo - Listar fotos',
+      'POST /json/photo - Criar foto',
+      'GET /json/stats - Estatísticas',
+      'POST /json/password/lost - Recuperar senha',
+      'POST /json/password/reset - Redefinir senha'
+    ]
+  });
 });
 
 // Conectar ao MongoDB
@@ -124,7 +137,7 @@ console.log('Rotas de API registradas');
 
 // Rota de status da API
 app.get('/json', (req, res) => {
-  res.json({ message: 'API está rodando' });
+  res.json({ message: 'API está rodando', status: 'ok' });
 });
 
 // Middleware para rotas /json não encontradas
@@ -133,29 +146,13 @@ app.use('/json/*', (req, res) => {
   res.status(404).json({ error: 'Rota de API não encontrada' });
 });
 
-// Servir arquivos estáticos (para frontend)
-app.use(express.static(path.join(__dirname, '../../public')));
-
-// Rota coringa SPA (HTML) — chamada só quando não for rota de API
-app.get('*', (req, res) => {
-  // Verificar se é uma rota de API que não foi encontrada
-  if (req.originalUrl.startsWith('/json/')) {
-    console.log(
-      'Rota de API não encontrada sendo interceptada pela rota coringa:',
-      req.originalUrl,
-    );
-    return res.status(404).json({ error: 'Rota de API não encontrada' });
-  }
-
-  console.log('Rota coringa acionada para:', req.url);
-  const indexPath = path.join(__dirname, '../../public/index.html');
-  console.log('Tentando servir index.html em:', indexPath);
-
-  res.sendFile(indexPath, (err) => {
-    if (err) {
-      console.error('Erro ao servir index.html:', err.message);
-      res.status(404).json({ error: 'Página não encontrada' });
-    }
+// Middleware para qualquer outra rota
+app.use('*', (req, res) => {
+  console.log('Rota não encontrada:', req.originalUrl);
+  res.status(404).json({ 
+    error: 'Rota não encontrada',
+    message: 'Esta é uma API REST. Use /json/* para acessar os endpoints da API.',
+    availableEndpoints: '/json'
   });
 });
 
@@ -164,3 +161,5 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
+
+export default app;

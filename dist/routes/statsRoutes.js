@@ -31,16 +31,26 @@ const express_1 = require("express");
 const Photo_1 = __importDefault(require("../models/Photo"));
 const auth_1 = require("../middleware/auth");
 const router = (0, express_1.Router)();
+// Adicionar log para debug
+console.log('Stats routes carregadas');
+// Rota de teste simples
+router.get('/stats-test', (req, res) => {
+    console.log('Rota de teste chamada');
+    res.json({ message: 'Rota funcionando' });
+});
 router.get('/stats', auth_1.authMiddleware, async (req, res) => {
+    console.log('=== ROTA /stats CHAMADA ==='); // Debug log mais visível
     try {
         const user = req.user;
         if (!user || !user.id) {
+            console.log('Usuário não autenticado'); // Debug log
             return res.status(401).json({ error: 'Usuário não possui permissão' });
         }
         console.log('Usuário autenticado:', user.id);
         const photos = await Photo_1.default.find({ author: user.id }).sort({
             createdAt: -1,
         });
+        console.log('Fotos encontradas:', photos.length); // Debug log
         // Calcular estatísticas mais detalhadas
         const totalAcessos = photos.reduce((sum, photo) => sum + photo.acessos, 0);
         const totalFotos = photos.length;
@@ -106,6 +116,7 @@ router.get('/stats', auth_1.authMiddleware, async (req, res) => {
                 ].filter((item) => item.value > 0),
             },
         };
+        console.log('=== RETORNANDO STATS ==='); // Debug log
         return res.status(200).json(stats);
     }
     catch (error) {
