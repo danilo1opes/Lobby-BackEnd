@@ -35,6 +35,9 @@ import { authMiddleware } from '../middleware/auth';
 
 const router = Router();
 
+// Adicionar log para debug
+console.log('Stats routes carregadas');
+
 interface StatsData {
   id: string;
   title: string;
@@ -44,9 +47,12 @@ interface StatsData {
 
 router.get('/stats', authMiddleware, async (req: Request, res: Response) => {
   try {
+    console.log('Rota /stats chamada'); // Debug log
+
     const user = (req as any).user;
 
     if (!user || !user.id) {
+      console.log('Usuário não autenticado'); // Debug log
       return res.status(401).json({ error: 'Usuário não possui permissão' });
     }
 
