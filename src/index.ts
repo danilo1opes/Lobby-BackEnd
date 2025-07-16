@@ -67,8 +67,7 @@
 // app.listen(PORT, () => {
 //   console.log(`Server running on port ${PORT}`);
 // });
-
-import express, { Express } from 'express';
+import express from 'express';
 import dotenv from 'dotenv';
 import connectDB from './config/database';
 import cors from 'cors';
@@ -81,7 +80,7 @@ import path from 'path';
 
 dotenv.config();
 
-const app: Express = express();
+const app = express();
 
 // Configurar CORS
 const corsOptions = {
@@ -121,9 +120,9 @@ app.use('/json', (req, res) => {
 // Servir arquivos estáticos (para frontend)
 app.use(express.static(path.join(__dirname, '../../public')));
 
-// Rota coringa SPA (HTML)
+// Rota coringa SPA (HTML) com log
 app.get('*', (req, res) => {
-  console.log('Rota coringa acionada para:', req.url);
+  console.log('Rota coringa acionada para:', req.url); // Log para depuração
   res.sendFile(path.join(__dirname, '../../public/index.html'), (err) => {
     if (err) {
       console.error('Erro ao servir index.html:', err.message);

@@ -37,12 +37,14 @@ const router = Router();
 
 router.get('/stats', authMiddleware, async (req: Request, res: Response) => {
   try {
-    const user = (req as any).user;
+    const user = req.user; // Agora funciona sem erro
+    
     if (!user || !user.id) {
       return res.status(401).json({ error: 'Usuário não possui permissão' });
     }
 
     console.log('Usuário autenticado:', user.id); // Log para depuração
+    
     const photos = await Photo.find({ author: user.id });
 
     const stats = photos.map((photo) => ({
