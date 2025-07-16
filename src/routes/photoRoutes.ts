@@ -285,17 +285,3 @@ router.delete(
     }
   },
 );
-
-router.get('*', (req, res) => {
-  console.log(
-    'Tentando servir index.html em:',
-    path.join(__dirname, '../../public/index.html'),
-  );
-  res.sendFile(path.join(__dirname, '../../public/index.html'), (err) => {
-    if (err) {
-      console.error('Erro ao servir index.html:', err.message);
-      res.status(404).send('Página não encontrada');
-    }
-  });
-});
-export default router;
