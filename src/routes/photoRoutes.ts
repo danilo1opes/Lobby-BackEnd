@@ -286,5 +286,4 @@ router.delete(
   },
 );
 
-// Removida a rota coringa que causava o conflito
 export default router;

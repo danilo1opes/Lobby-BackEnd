@@ -45,11 +45,11 @@ app.get('/json', (req, res) => {
 
 // Middleware para rotas /json não encontradas
 app.use('/json', (req, res) => {
-  res.status(404).json({ error: 'Rota de API não encontrada' }); // Garantir JSON
+  res.status(404).json({ error: 'Rota de API não encontrada' });
 });
 
 // Servir arquivos estáticos (para frontend)
-app.use(express.static(path.join(__dirname, '../../public'))); // Ajuste para o caminho correto
+app.use(express.static(path.join(__dirname, '../../public')));
 
 // Rota coringa SPA (HTML) — chamada só quando não for rota de API
 app.get('*', (req, res) => {

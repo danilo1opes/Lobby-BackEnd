@@ -232,13 +232,4 @@ router.delete('/photo/:id', auth_1.authMiddleware, async (req, res) => {
         return res.status(500).json({ error: 'Erro interno no servidor' });
     }
 });
-router.get('*', (req, res) => {
-    console.log('Tentando servir index.html em:', path_1.default.join(__dirname, '../../public/index.html'));
-    res.sendFile(path_1.default.join(__dirname, '../../public/index.html'), (err) => {
-        if (err) {
-            console.error('Erro ao servir index.html:', err.message);
-            res.status(404).send('Página não encontrada');
-        }
-    });
-});
 exports.default = router;

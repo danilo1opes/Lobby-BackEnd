@@ -92,14 +92,13 @@ router.post('/password/reset', async (req: Request, res: Response) => {
     console.log(`Senha alterada para usuário ${user.username}`);
     return res.status(200).json({ message: 'Senha alterada' });
   } catch (error: any) {
-    // Tipagem explícita como 'any'
     console.error('Erro no /password/reset:', error);
     return res.status(500).json({
       error: 'Erro interno no servidor',
       details:
         process.env.NODE_ENV === 'development'
           ? (error as Error).message
-          : undefined, // Cast explícito
+          : undefined,
     });
   }
 });
