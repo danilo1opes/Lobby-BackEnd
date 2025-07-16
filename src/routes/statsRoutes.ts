@@ -45,10 +45,16 @@ interface StatsData {
   createdAt: Date;
 }
 
-router.get('/stats', authMiddleware, async (req: Request, res: Response) => {
-  try {
-    console.log('Rota /stats chamada'); // Debug log
+// Rota de teste simples
+router.get('/stats-test', (req: Request, res: Response) => {
+  console.log('Rota de teste chamada');
+  res.json({ message: 'Rota funcionando' });
+});
 
+router.get('/stats', authMiddleware, async (req: Request, res: Response) => {
+  console.log('=== ROTA /stats CHAMADA ==='); // Debug log mais visível
+
+  try {
     const user = (req as any).user;
 
     if (!user || !user.id) {
@@ -61,6 +67,7 @@ router.get('/stats', authMiddleware, async (req: Request, res: Response) => {
     const photos = await Photo.find({ author: user.id }).sort({
       createdAt: -1,
     });
+    console.log('Fotos encontradas:', photos.length); // Debug log
 
     // Calcular estatísticas mais detalhadas
     const totalAcessos = photos.reduce((sum, photo) => sum + photo.acessos, 0);
@@ -140,6 +147,7 @@ router.get('/stats', authMiddleware, async (req: Request, res: Response) => {
       },
     };
 
+    console.log('=== RETORNANDO STATS ==='); // Debug log
     return res.status(200).json(stats);
   } catch (error) {
     console.error('Erro em /stats:', error);
