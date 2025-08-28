@@ -41,7 +41,7 @@ router.post('/password/lost', async (req: Request, res: Response) => {
       id: user._id.toString(),
       username: user.username,
     });
-    const resetUrl = `${url}/?key=${resetToken}&login=${encodeURIComponent(
+    const resetUrl = `${url}/login/reset?key=${resetToken}&login=${encodeURIComponent(
       user.username,
     )}`;
 
